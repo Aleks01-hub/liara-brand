@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel · LIARA BRAND</title>
+<style>
+:root{--bg:#f7efe8;--ink:#231f1c;--mute:#7a6c62;--card:#efe3d8;--line:#e2d3c5;--acc:#9b6b52;--ai:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1816;--ink:#f3e9df;--mute:#aa9a8d;--card:#2a2421;--line:#3a322d;--acc:#c9967a;--ai:#1c1816}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;padding:16px}
+main{max-width:900px;margin:auto}h1{font-size:24px;margin:0}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+input,textarea,select{width:100%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit}
+label{display:grid;gap:3px;font-size:13px;color:var(--mute)}
+button{font:inherit;border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;background:var(--acc);color:var(--ai)}
+button.g{background:none;color:var(--acc);border:1.5px solid var(--acc)}
+.box{background:var(--card);border-radius:14px;padding:16px;margin-bottom:16px}
+.fg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.fg .w{grid-column:1/-1}
+.it{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.it img,.it i{width:56px;height:70px;object-fit:cover;border-radius:8px;background:var(--line)}
+.it small{color:var(--mute)}.ac{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.off{background:var(--ink);color:var(--bg)}
+#msg{color:var(--acc);font-weight:700;min-height:24px}
+@media(max-width:600px){.fg{grid-template-columns:1fr}.it{grid-template-columns:56px 1fr}.ac{grid-column:1/-1;justify-content:flex-start}}
+</style></head><body><main>
+<div class="top"><h1>LIARA BRAND · Painel</h1><button class="g" id="sair" hidden>Sair</button></div>
+<div id="msg" role="status"></div>
+<section class="box" id="login"><div class="fg">
+  <label>Usuário<input id="u" autocomplete="username"></label>
+  <label>Senha<input id="s" type="password" autocomplete="current-password"></label>
+  <div class="w"><button id="entrar">Entrar</button></div></div></section>
+<div id="app" hidden>
+<section class="box"><h2 id="ft" style="margin-top:0">Novo produto</h2><div class="fg">
+  <label>Nome<input id="nome"></label>
+  <label>Preço (R$)<input id="preco" type="number" step="0.01" min="0"></label>
+  <label>Preço antigo (opcional)<input id="antigo" type="number" step="0.01" min="0"></label>
+  <label>Categoria<input id="cat" placeholder="Vestidos, Blusas, Calças..."></label>
+  <label>Seção<select id="gen"><option>Feminino</option><option>Masculino</option></select></label>
+  <label>Foto principal<input id="img" placeholder="Link da foto (preenche sozinho ao enviar)"><input type="file" id="fimg" accept="image/*"></label>
+  <label class="w">Descrição<textarea id="desc" rows="2"></textarea></label>
+  <label class="w">Cores, uma por linha: Nome | #hex | foto da cor (opcional)<textarea id="var" rows="3" placeholder="Preto | #231f1c | img/body-preto.jpg"></textarea></label>
+  <label class="w">Enviar foto de uma cor<span style="display:flex;gap:8px"><select id="csel" style="max-width:200px"></select><input type="file" id="fcor" accept="image/*"></span></label>
+  <label>Tamanhos (separe por vírgula)<input id="tam" placeholder="PP, P, M, G, GG"></label>
+  <label>Opções<span><input id="est" type="checkbox" style="width:auto" checked> Em estoque &nbsp; <input id="dest" type="checkbox" style="width:auto"> Destaque</span></label>
+  <div class="w"><button id="salvar">Salvar produto</button> <button class="g" id="limpar">Limpar</button></div>
+</div></section>
+<section class="box"><h2 style="margin-top:0">Produtos</h2><div id="lista"></div></section>
+</div></main>
+<script>
+var T=localStorage.getItem("tk"),L=[],ed=null,$=function(i){return document.getElementById(i)};
+function msg(t){$("msg").textContent=t;clearTimeout(msg.t);msg.t=setTimeout(function(){$("msg").textContent=""},3000)}
+function api(u,m,b){return fetch(u,{method:m||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+T},body:b?JSON.stringify(b):undefined}).then(function(r){if(r.status==401&&T){sair();throw 0}return r.json()})}
+function mostrar(){var on=!!T;$("login").hidden=on;$("app").hidden=!on;$("sair").hidden=!on;if(on)listar()}
+function sair(){T=null;localStorage.removeItem("tk");mostrar()}
+$("sair").onclick=sair;
+$("entrar").onclick=function(){fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario:$("u").value,senha:$("s").value})}).then(function(r){return r.json()}).then(function(d){if(d.token){T=d.token;localStorage.setItem("tk",T);mostrar()}else msg(d.erro||"Falha no login")})};
+function brl(v){return "R$ "+Number(v).toFixed(2).replace(".",",")}
+function listar(){api("/api/produtos").then(function(r){L=r;$("lista").innerHTML=r.map(function(p){
+  return '<div class="it">'+(p.imagem_url?'<img src="'+p.imagem_url+'" alt="">':'<i></i>')+'<div><b>'+p.nome+'</b><br><small>'+p.genero+' · '+p.categoria+' · '+brl(p.preco)+'</small></div><div class="ac"><button data-e="'+p.id+'" class="'+(p.em_estoque?'':'off')+'">'+(p.em_estoque?'Em estoque':'Esgotado')+'</button><button class="g" data-ed="'+p.id+'">Editar</button><button class="g" data-x="'+p.id+'">Excluir</button></div></div>'}).join("")||"<p>Nenhum produto ainda.</p>"})}
+$("lista").onclick=function(e){var t=e.target,id=t.dataset.e||t.dataset.ed||t.dataset.x;if(!id)return;
+  var p=L.filter(function(x){return x.id==id})[0];
+  if(t.dataset.e)api("/api/produtos/"+id+"/estoque","PATCH",{em_estoque:!p.em_estoque}).then(listar);
+  if(t.dataset.x&&confirm("Excluir "+p.nome+"?"))api("/api/produtos/"+id,"DELETE").then(function(){msg("Produto excluído");listar()});
+  if(t.dataset.ed){ed=p.id;$("ft").textContent="Editando: "+p.nome;$("nome").value=p.nome;$("preco").value=p.preco;$("antigo").value=p.preco_antigo||"";$("cat").value=p.categoria;$("gen").value=p.genero;$("img").value=p.imagem_url||"";$("desc").value=p.descricao;
+    $("var").value=(p.variantes||[]).map(function(v){return [v.cor,v.hex||"",v.imagem||""].join(" | ")}).join("\n");$("tam").value=(p.tamanhos||[]).join(", ");$("est").checked=p.em_estoque;$("dest").checked=p.destaque;cores();scrollTo(0,0)}};
+function limpar(){ed=null;$("ft").textContent="Novo produto";document.querySelectorAll("#app input[type=text],#app input:not([type]),#app input[type=number],#app textarea").forEach(function(i){i.value=""});$("est").checked=true;$("dest").checked=false;cores()}
+$("limpar").onclick=limpar;
+$("salvar").onclick=function(){
+  var b={nome:$("nome").value,preco:$("preco").value,preco_antigo:$("antigo").value,categoria:$("cat").value.trim(),genero:$("gen").value,imagem_url:$("img").value.trim(),descricao:$("desc").value,
+    variantes:$("var").value.split("\n").map(function(l){var a=l.split("|").map(function(x){return x.trim()});return a[0]?{cor:a[0],hex:a[1]||"#cccccc",imagem:a[2]||""}:null}).filter(Boolean),
+    tamanhos:$("tam").value.split(",").map(function(x){return x.trim()}).filter(Boolean),em_estoque:$("est").checked,destaque:$("dest").checked};
+  api(ed?"/api/produtos/"+ed:"/api/produtos",ed?"PUT":"POST",b).then(function(d){if(d.erro)return msg(d.erro);msg("Produto salvo");limpar();listar()})};
+function reduzir(f){return new Promise(function(ok,no){var im=new Image(),u=URL.createObjectURL(f);im.onload=function(){var k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",.82))};im.onerror=no;im.src=u})}
+function enviar(f){msg("Enviando foto...");return reduzir(f).then(function(d){return api("/api/imagens","POST",{dados:d})}).then(function(r){if(!r.url)throw 0;msg("Foto enviada");return r.url}).catch(function(){msg("Não foi possível enviar a foto");return null})}
+$("fimg").onchange=function(){var f=this.files[0];if(f)enviar(f).then(function(u){if(u)$("img").value=u;$("fimg").value=""})};
+function cores(){$("csel").innerHTML=$("var").value.split("\n").map(function(l,i){var n=l.split("|")[0].trim();return n?'<option value="'+i+'">'+n+'</option>':""}).join("")||'<option value="">Cadastre as cores acima</option>'}
+$("var").oninput=cores;
+$("fcor").onchange=function(){var f=this.files[0],i=$("csel").value;if(!f||i==="")return;enviar(f).then(function(u){if(u){var ls=$("var").value.split("\n"),a=ls[i].split("|").map(function(x){return x.trim()});ls[i]=[a[0],a[1]||"#cccccc",u].join(" | ");$("var").value=ls.join("\n");cores();$("csel").value=i}$("fcor").value=""})};
+cores();mostrar();
+</script></body></html>

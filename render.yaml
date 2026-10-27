@@ -1,0 +1,23 @@
+# render.yaml — Deploy automático no Render (Free Tier)
+services:
+  - type: web
+    name: liara-brand
+    runtime: node
+    plan: free
+    region: oregon          # ou "singapore" se preferir menor latência p/ BR
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/produtos
+    envVars:
+      - key: DATABASE_URL
+        sync: false         # preencha no dashboard (Settings → Environment)
+      - key: DB_SSL
+        value: "true"
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: "3000"       # Render injeta a porta real; o Express lê process.env.PORT

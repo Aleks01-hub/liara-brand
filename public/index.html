@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LIARA BRAND · Moda feminina e masculina</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#f7efe8;--ink:#231f1c;--mute:#7a6c62;--card:#efe3d8;--line:#e2d3c5;--acc:#9b6b52;--accink:#fff;--tan:#b8a08a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1816;--ink:#f3e9df;--mute:#aa9a8d;--card:#2a2421;--line:#3a322d;--acc:#c9967a;--accink:#1c1816}}
+:root[data-theme="dark"]{--bg:#1c1816;--ink:#f3e9df;--mute:#aa9a8d;--card:#2a2421;--line:#3a322d;--acc:#c9967a;--accink:#1c1816}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand img{filter:invert(1) hue-rotate(180deg)}}
+:root[data-theme="dark"] .brand img{filter:invert(1) hue-rotate(180deg)}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 84px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "DM Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Cormorant Garamond",Georgia,serif;margin:0;font-weight:600}
+button{font:inherit;cursor:pointer;color:inherit}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.promo{background:var(--acc);color:var(--accink);text-align:center;font-size:14px;padding:8px 12px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:16px;padding:8px 20px;max-width:1200px;margin:auto}
+.brand{display:block;line-height:0}
+.brand img{height:64px;width:auto}
+.search{flex:1;max-width:420px;margin-left:auto}
+.search input{width:100%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:10px 16px;font:inherit}
+.cartbtn{border:1.5px solid var(--acc);color:var(--acc);background:none;border-radius:999px;padding:8px 16px;font-weight:700;white-space:nowrap}
+.cartbtn b{background:var(--acc);color:var(--accink);border-radius:999px;padding:0 8px;margin-left:6px}
+.bubs{max-width:1200px;margin:0 auto;padding:10px 20px;display:flex;gap:14px;overflow-x:auto;scrollbar-width:none}
+.bub{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:78px;font-size:13px;font-weight:500}
+.bub i{width:72px;height:72px;border-radius:50%;background:var(--card);display:grid;place-items:center;border:2px solid transparent;font-style:normal;font-size:26px;color:var(--acc);font-weight:700}
+.bub svg{width:38px;fill:var(--acc)}
+.bub[aria-pressed="true"] i{border-color:var(--acc)}
+.bub[aria-pressed="true"]{font-weight:700}
+.hero{max-width:1200px;margin:8px auto;padding:0 20px}
+.banner{background:var(--card);border-radius:22px;padding:clamp(24px,5vw,56px);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.banner h1{font-size:clamp(38px,6vw,72px);line-height:1}
+.banner p{color:var(--mute);margin:10px 0 0;max-width:42ch}
+.btn{border:0;border-radius:999px;padding:12px 24px;font-weight:700;text-decoration:none;display:inline-block;background:var(--acc);color:var(--accink)}
+.sec{max-width:1200px;margin:34px auto;padding:0 20px}
+.sec h2{font-size:clamp(30px,4vw,44px)}
+.sec>p{color:var(--mute);margin:0 0 14px}
+.flash{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+#clock{background:var(--acc);color:var(--accink);border-radius:8px;padding:2px 10px;font-weight:700;font-variant-numeric:tabular-nums}
+.strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.fc{flex:0 0 160px;text-decoration:none;color:inherit}
+.fc .pic{aspect-ratio:3/4}
+.fc h3{font-family:"DM Sans",sans-serif;font-size:14px;font-weight:500;margin:6px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.card{display:flex;flex-direction:column;border-radius:14px}
+.card.hl{outline:3px solid var(--acc);outline-offset:6px}
+.pic{background:var(--card);border-radius:14px;aspect-ratio:4/5;position:relative;display:grid;place-items:center}
+.pic svg{width:60%;transition:fill .2s}
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px}
+.tag{position:absolute;left:8px;top:8px;background:var(--acc);color:var(--accink);font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px}
+.rk{position:absolute;right:8px;top:8px;background:var(--tan);color:#231f1c;font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px}
+.card h3{font-family:"DM Sans",sans-serif;font-size:16px;font-weight:500;margin:10px 0 2px}
+.price b{font-size:18px;color:var(--acc)}
+.price s{color:var(--mute);font-size:14px;margin-left:6px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.lbl{font-size:13px;color:var(--mute);width:100%}
+.sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0}
+.sw[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+.sz{min-width:36px;height:32px;border:1.5px solid var(--line);background:none;border-radius:8px;font-weight:700;font-size:13px}
+.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
+.out .pic{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
+.qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}
+.empty{color:var(--mute);padding:20px 0}
+.perks{max-width:1200px;margin:40px auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.perks div{background:var(--card);border-radius:14px;padding:16px}
+.perks b{display:block}
+footer{background:var(--card);color:var(--mute);border-top:1px solid var(--line);text-align:center;padding:26px 20px;font-size:14px}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(380px,100%);background:var(--bg);border-left:1px solid var(--line);z-index:10;transform:translateX(100%);transition:transform .25s;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+#drawer.open{transform:none}
+#items{flex:1;overflow:auto;margin:12px 0}
+.fld{display:grid;gap:8px;margin-bottom:12px}
+.fld label{font-size:13px;color:var(--mute);display:grid;gap:3px}
+.fld input,.fld textarea,.fld select{width:100%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 12px;font:inherit}
+.fld .bad{border-color:var(--acc)}
+.it{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.it button{background:none;border:0;color:var(--acc);font-weight:700}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 18px;border-radius:999px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;text-align:center}
+#toast.on{opacity:1}
+@media (max-width:640px){.brand img{height:52px}.search{max-width:none}.grid{grid-template-columns:repeat(2,1fr);gap:12px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="promo">Frete grátis acima de R$ 149 · 10% OFF na primeira compra com o cupom LIARA10</div>
+<header>
+  <a class="brand" href="#top" aria-label="LIARA BRAND"><img src="img/logo.png" alt="LIARA BRAND"></a>
+  <div class="search"><input id="q" type="search" placeholder="Buscar peças" aria-label="Buscar peças"></div>
+  <button class="cartbtn" id="openCart" aria-label="Abrir sacola">Sacola<b id="count">0</b></button>
+</header>
+<nav class="bubs" id="bubs" aria-label="Categorias"></nav>
+<main id="top">
+<section class="hero"><div class="banner">
+  <div><h1>Nova coleção<br>LIARA</h1><p>Peças para o dia a dia, em várias cores e tamanhos.</p></div>
+</div></section>
+<section class="sec" id="destaques"><h2>Destaques da semana</h2>
+  <div class="flash"><span>Oferta relâmpago termina em</span><span id="clock">00:00:00</span></div>
+  <div class="strip" id="strip"></div></section>
+<section class="sec" id="feminino"><h2>Feminino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gF"></div></section>
+<section class="sec" id="masculino"><h2>Masculino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gM"></div></section>
+<div class="sec empty" id="none" hidden>Nenhuma peça encontrada. Tente outra categoria ou palavra.</div>
+<section class="perks">
+  <div><b>Troca grátis</b>Até 30 dias após a entrega.</div>
+  <div><b>Pague no Pix</b>5% OFF no pagamento à vista.</div>
+  <div><b>Parcele em 6x</b>Sem juros no cartão.</div>
+  <div><b>Envio rápido</b>Postamos em até 24 horas.</div>
+</section>
+</main>
+<footer>© 2026 LIARA BRAND. Todos os direitos reservados.</footer>
+<aside id="drawer" aria-label="Sacola de compras">
+  <div style="display:flex;justify-content:space-between;align-items:center"><h2>Sua sacola</h2><button class="cartbtn" id="closeCart">Fechar</button></div>
+  <div id="items"></div>
+  <div class="fld">
+    <label>Nome completo<input id="cn" autocomplete="name"></label>
+    <label>Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
+    <label>Forma de pagamento<select id="cp"><option value="">Escolha</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select></label>
+  </div>
+  <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px"><span>Total</span><span id="total">R$ 0,00</span></div>
+  <button class="btn" id="checkout" style="margin-top:12px">Finalizar compra</button>
+</aside>
+<div id="toast" role="status"></div>
+<script>
+var WA="5588988745392";/* número da loja com DDI+DDD, só dígitos. Ex.: 5588999999999 */
+var SH={
+tee:"M30 10L10 28L22 40L30 34V100H70V34L78 40L90 28L70 10Q50 24 30 10Z",
+crop:"M30 20L10 36L22 46L30 40V80H70V40L78 46L90 36L70 20Q50 34 30 20Z",
+dress:"M34 8L28 30L36 44L20 108H80L64 44L72 30L66 8Q50 22 34 8Z",
+pants:"M30 10H70L74 108H54L50 44L46 108H26Z",
+hoodie:"M32 12Q50 2 68 12L90 34L80 50L72 44V100H28V44L20 50L10 34Z",
+shorts:"M28 20H72L80 76H54L50 46L46 76H20Z",
+skirt:"M32 22H68L86 100H14Z",
+body:"M34 8L28 24L36 40L30 62L38 96H62L70 62L64 40L72 24L66 8Q50 20 34 8Z"};
+var C={};
+var SF=["PP","P","M","G","GG"],SM=["P","M","G","GG"];
+var P=[];
+var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body"};
+var cart=[],sel={},cat="all",qs="";
+function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
+function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
+function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
+function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(35,31,28,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
+function card(p){
+  sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
+  var sw=p.c.map(function(k){return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" style="background:'+C[k][1]+'"></button>'}).join("");
+  var sz=p.z.map(function(z){return '<button class="sz" data-z="'+z+'" aria-pressed="'+(z==s.z)+'">'+z+'</button>'}).join("");
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho</span>'+sz+'</div>'+(p.e?'<button class="add">Adicionar à sacola</button>':'<button class="add" disabled>Esgotado</button>')+'</article>';
+}
+function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
+function ok(p){
+  var t=qs&&p.n.toLowerCase().indexOf(qs)<0?false:true;if(!t)return false;
+  if(cat=="all")return true;if(cat=="F"||cat=="M")return p.s==cat;if(cat=="ofertas")return !!p.o;return p.k==cat;
+}
+function render(){
+  document.getElementById("strip").innerHTML=P.filter(function(p){return p.r}).sort(function(a,b){return a.r-b.r}).map(fc).join("");
+  var n=0;
+  ["F","M"].forEach(function(s){
+    var l=P.filter(function(p){return p.s==s&&ok(p)});n+=l.length;
+    document.getElementById("g"+s).innerHTML=l.map(card).join("");
+    document.getElementById(s=="F"?"feminino":"masculino").hidden=!l.length;
+  });
+  document.getElementById("none").hidden=n>0;bubs();
+}
+function toast(t){var e=document.getElementById("toast");e.textContent=t;e.className="on";clearTimeout(toast.t);toast.t=setTimeout(function(){e.className=""},2200)}
+document.addEventListener("click",function(e){
+  var t=e.target,b=t.closest(".bub"),g=t.closest("[data-go]"),cd=t.closest(".card");
+  if(b){cat=b.dataset.cat;render();var d=cat=="M"?"masculino":"feminino";if(cat=="F"||cat=="M")document.getElementById(d).scrollIntoView()}
+  if(g){var el=document.getElementById("p"+g.dataset.go);if(el){el.classList.add("hl");setTimeout(function(){el.classList.remove("hl")},2000)}}
+  if(cd){
+    var id=+cd.dataset.id,p=P.filter(function(x){return x.id==id})[0];
+    if(t.classList.contains("sw")){
+      sel[id].c=t.dataset.k;
+      cd.querySelectorAll(".sw").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
+      var im=cd.querySelector(".pic img");if(im&&p.imgs)im.src=p.imgs[t.dataset.k];var sv=cd.querySelector(".pic svg");if(sv)sv.setAttribute("fill",C[t.dataset.k][1]);
+      cd.querySelector(".cn").textContent=C[t.dataset.k][0];
+    }else if(t.classList.contains("sz")){
+      sel[id].z=t.dataset.z;
+      cd.querySelectorAll(".sz").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
+    }else if(t.classList.contains("add")){
+      if(!sel[id].z){toast("Escolha um tamanho primeiro");return}
+      addCart(id,p.n,C[sel[id].c][0],sel[id].z,p.p);
+      upd();toast("Adicionado: "+p.n+" · "+C[sel[id].c][0]+" · "+sel[id].z);
+    }
+  }
+  if(t.closest("#openCart"))document.getElementById("drawer").classList.add("open");
+  if(t.closest("#closeCart"))document.getElementById("drawer").classList.remove("open");
+  if(t.dataset&&t.dataset.rm!==undefined){cart.splice(+t.dataset.rm,1);upd()}
+  if(t.dataset&&t.dataset.q){var qa=t.dataset.q.split(":"),ci=cart[+qa[0]];ci.q+=+qa[1];if(ci.q<1)cart.splice(+qa[0],1);upd()}
+  if(t.id=="checkout")checkout();
+});
+document.getElementById("q").addEventListener("input",function(e){qs=e.target.value.trim().toLowerCase();render()});
+function addCart(id,n,c,z,p){var f=cart.filter(function(i){return i.id==id&&i.c==c&&i.z==z})[0];if(f)f.q++;else cart.push({id:id,n:n,c:c,z:z,p:p,q:1})}
+function checkout(){
+  if(!cart.length){toast("Sua sacola está vazia");return}
+  var bad=null;["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
+  if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
+  var tot=0,m="Olá! Gostaria de fazer o seguinte pedido:\n\n";
+  cart.forEach(function(i){tot+=i.p*i.q;m+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+" ("+brl(i.p*i.q)+")\n"});
+  m+="\nTotal: "+brl(tot)+"\n\nNome: "+document.getElementById("cn").value.trim()+"\nEndereço: "+document.getElementById("ca").value.trim()+"\nPagamento: "+document.getElementById("cp").value;
+  var a=document.createElement("a");a.href="https://wa.me/"+WA+"?text="+encodeURIComponent(m);a.target="_blank";a.rel="noopener";
+  document.body.appendChild(a);a.click();a.remove();toast("Abrindo o WhatsApp da loja");
+}
+function upd(){
+  document.getElementById("count").textContent=cart.reduce(function(a,i){return a+i.q},0);
+  document.getElementById("items").innerHTML=cart.length?cart.map(function(i,k){return '<div class="it"><span><b>'+i.n+'</b><br>'+i.c+' · Tam. '+i.z+'<br>'+brl(i.p*i.q)+'<br><span class="qt"><button data-q="'+k+':-1" aria-label="Menos">−</button>'+i.q+'<button data-q="'+k+':1" aria-label="Mais">+</button></span></span><button data-rm="'+k+'">Remover</button></div>'}).join(""):'<p style="color:var(--mute)">Sua sacola está vazia. Escolha uma peça, cor e tamanho.</p>';
+  document.getElementById("total").textContent=brl(cart.reduce(function(a,i){return a+i.p*i.q},0));
+}
+function tick(){
+  var n=new Date(),e=new Date(n);e.setHours(23,59,59,999);
+  var s=Math.floor((e-n)/1000),f=function(v){return String(v).padStart(2,"0")};
+  document.getElementById("clock").textContent=f(Math.floor(s/3600))+":"+f(Math.floor(s%3600/60))+":"+f(s%60);
+}
+function slug(t){return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
+function carregar(){
+  fetch("/api/produtos").then(function(r){return r.json()}).then(function(rows){
+    var cs={},rk=0;
+    P=rows.map(function(d){
+      var vs=d.variantes&&d.variantes.length?d.variantes:[{cor:"Único",hex:"#cccccc"}],im={},ks=vs.map(function(v){var k=slug(v.cor);C[k]=[v.cor,v.hex||"#cccccc"];im[k]=v.imagem||d.imagem_url||"";return k});
+      var k=slug(d.categoria||"outros"),p=+d.preco,o=+d.preco_antigo||0,tem=ks.some(function(x){return im[x]});cs[k]=d.categoria;
+      return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:d.em_estoque,
+        tag:d.em_estoque?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
+    });
+    CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["ofertas","Ofertas","%"]]);
+    render();
+  }).catch(function(){var n=document.getElementById("none");n.textContent="Não foi possível carregar os produtos agora. Tente novamente.";n.hidden=false});
+}
+upd();tick();setInterval(tick,1000);carregar();
+</script>
+</body>
+</html>

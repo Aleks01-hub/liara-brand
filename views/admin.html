@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIARA BRAND | Administração</title>
+<style>
+:root{color-scheme:dark;--bg:#111;--panel:#1b1b1b;--line:#343434;--text:#f5f2ef;--muted:#aaa;--accent:#d7b49b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif}header{padding:22px 5%;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}h1{font-size:20px;letter-spacing:.16em;margin:0}main{max-width:1100px;margin:32px auto;padding:0 18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:20px}h2{font-size:17px;margin-top:0}label{display:block;color:var(--muted);font-size:13px;margin:10px 0 5px}input,textarea,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;background:#101010;color:var(--text);font:inherit}textarea{min-height:75px}button{border:0;border-radius:8px;padding:11px 15px;background:var(--accent);color:#191512;font-weight:650;cursor:pointer;margin-top:12px}button.secondary{background:#333;color:white}button.danger{background:#703c3c;color:white}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.product{padding:14px 0;border-bottom:1px solid var(--line)}.muted{color:var(--muted)}.hidden{display:none!important}#status{margin-top:12px;color:var(--accent);white-space:pre-wrap}@media(max-width:560px){header{padding:18px}main{margin-top:18px}.panel{padding:16px}}
+</style></head>
+<body>
+<header><h1>LIARA BRAND</h1><span class="muted">Painel administrativo</span></header>
+<main>
+<section id="login" class="panel"><h2>Acesso do administrador</h2><p class="muted">Entre com as credenciais definidas nas variáveis ADMIN_USER e ADMIN_PASS do servidor.</p>
+<form id="loginForm"><label for="usuario">Usuário</label><input id="usuario" autocomplete="username" required><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required><button>Entrar</button></form><div id="loginStatus" role="status"></div></section>
+<section id="dashboard" class="hidden">
+<div class="row"><h2>Produtos cadastrados</h2><button class="secondary" id="logout">Sair</button></div>
+<section class="panel"><h2 id="formTitle">Adicionar produto</h2><form id="productForm">
+<input id="productId" type="hidden">
+<div class="grid"><div><label for="nome">Nome *</label><input id="nome" required></div><div><label for="preco">Preço (R$) *</label><input id="preco" type="number" min="0" step=".01" required></div><div><label for="preco_antigo">Preço anterior (opcional)</label><input id="preco_antigo" type="number" min="0" step=".01"></div><div><label for="categoria">Categoria</label><input id="categoria" value="Outros"></div><div><label for="genero">Público</label><select id="genero"><option>Feminino</option><option>Masculino</option></select></div><div><label for="imagem_url">Caminho/URL da imagem</label><input id="imagem_url" placeholder="img/produto.jpg"></div></div>
+<label for="descricao">Descrição</label><textarea id="descricao"></textarea>
+<label for="tamanhos">Tamanhos (separados por vírgula)</label><input id="tamanhos" placeholder="P, M, G">
+<label for="variantes">Variações em JSON (opcional)</label><textarea id="variantes" placeholder='[{"cor":"Preto","hex":"#000000","imagem":"img/preto.jpg"}]'></textarea>
+<div class="grid"><label><input id="em_estoque" type="checkbox" checked style="width:auto"> Em estoque</label><label><input id="destaque" type="checkbox" style="width:auto"> Produto em destaque</label></div>
+<button type="submit">Salvar produto</button> <button type="button" class="secondary" id="cancelEdit">Limpar</button>
+</form><div id="status" role="status"></div></section>
+<section class="panel"><div class="row"><h2>Catálogo</h2><button id="refresh" class="secondary">Atualizar lista</button></div><div id="products" class="muted">Carregando produtos…</div></section>
+</section>
+</main>
+<script>
+let token = sessionStorage.getItem('liara_admin_token') || '';
+const $ = id => document.getElementById(id);
+const money = n => Number(n || 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+async function api(url, options={}) {
+ const headers={'Content-Type':'application/json',...(options.headers||{})};
+ if(token) headers.Authorization='Bearer '+token;
+ const response=await fetch(url,{...options,headers});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok) throw new Error(data.erro || 'Falha na solicitação ('+response.status+')');
+ return data;
+}
+function showDashboard(){ $('login').classList.toggle('hidden',!!token); $('dashboard').classList.toggle('hidden',!token); if(token) loadProducts();}
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginStatus').textContent='Verificando…';try{const r=await api('/api/login',{method:'POST',body:JSON.stringify({usuario:$('usuario').value,senha:$('senha').value})});token=r.token;sessionStorage.setItem('liara_admin_token',token);$('loginStatus').textContent='';showDashboard();}catch(err){$('loginStatus').textContent=err.message;}});
+$('logout').onclick=()=>{token='';sessionStorage.removeItem('liara_admin_token');showDashboard();};
+$('refresh').onclick=loadProducts;
+$('cancelEdit').onclick=resetForm;
+function resetForm(){ $('productForm').reset();$('productId').value='';$('formTitle').textContent='Adicionar produto';$('em_estoque').checked=true;$('status').textContent='';}
+$('productForm').addEventListener('submit',async e=>{e.preventDefault();try{
+ let variantes=[];if($('variantes').value.trim()) variantes=JSON.parse($('variantes').value);
+ if(!Array.isArray(variantes)) throw new Error('Variações precisa ser uma lista JSON.');
+ const id=$('productId').value;
+ const product={nome:$('nome').value,preco:Number($('preco').value),preco_antigo:$('preco_antigo').value?Number($('preco_antigo').value):null,categoria:$('categoria').value||'Outros',genero:$('genero').value,imagem_url:$('imagem_url').value||null,descricao:$('descricao').value, tamanhos:$('tamanhos').value.split(',').map(x=>x.trim()).filter(Boolean),variantes,em_estoque:$('em_estoque').checked,destaque:$('destaque').checked};
+ await api(id?'/api/produtos/'+id:'/api/produtos',{method:id?'PUT':'POST',body:JSON.stringify(product)});
+ $('status').textContent='Produto salvo com sucesso.';resetForm();await loadProducts();
+ }catch(err){$('status').textContent=err.message;}});
+async function loadProducts(){const root=$('products');root.textContent='Carregando…';try{const products=await api('/api/produtos');root.innerHTML='';if(!products.length){root.textContent='Nenhum produto cadastrado.';return;}products.forEach(p=>{
+ const item=document.createElement('div');item.className='product';
+ const top=document.createElement('div');top.className='row';
+ const details=document.createElement('div');const title=document.createElement('strong');title.textContent=p.nome;const info=document.createElement('div');info.className='muted';info.textContent=money(p.preco)+' · '+(p.categoria||'Outros')+' · '+(p.em_estoque?'Em estoque':'Sem estoque');details.append(title,info);
+ const actions=document.createElement('div');actions.className='row';
+ const edit=document.createElement('button');edit.className='secondary';edit.textContent='Editar';edit.onclick=()=>editProduct(p);
+ const stock=document.createElement('button');stock.className='secondary';stock.textContent=p.em_estoque?'Marcar sem estoque':'Marcar em estoque';stock.onclick=async()=>{try{await api('/api/produtos/'+p.id+'/estoque',{method:'PATCH',body:JSON.stringify({em_estoque:!p.em_estoque})});await loadProducts();}catch(e){alert(e.message)}};
+ const del=document.createElement('button');del.className='danger';del.textContent='Excluir';del.onclick=async()=>{if(confirm('Excluir '+p.nome+'?'))try{await api('/api/produtos/'+p.id,{method:'DELETE'});await loadProducts();}catch(e){alert(e.message)}};
+ actions.append(edit,stock,del);top.append(details,actions);item.append(top);root.append(item);
+ });}catch(e){root.textContent=e.message+' — verifique a conexão com o banco e a configuração do servidor.';}}
+function editProduct(p){$('productId').value=p.id;$('nome').value=p.nome||'';$('preco').value=p.preco??'';$('preco_antigo').value=p.preco_antigo??'';$('categoria').value=p.categoria||'Outros';$('genero').value=p.genero||'Feminino';$('imagem_url').value=p.imagem_url||'';$('descricao').value=p.descricao||'';$('tamanhos').value=Array.isArray(p.tamanhos)?p.tamanhos.join(', '):'';$('variantes').value=JSON.stringify(p.variantes||[],null,2);$('em_estoque').checked=p.em_estoque!==false;$('destaque').checked=!!p.destaque;$('formTitle').textContent='Editar produto #'+p.id;window.scrollTo({top:0,behavior:'smooth'});}
+showDashboard();
+</script></body></html>

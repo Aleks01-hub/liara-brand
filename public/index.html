@@ -146,8 +146,11 @@ function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
   var sw=p.c.map(function(k){return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" style="background:'+C[k][1]+'"></button>'}).join("");
-  var sz=p.z.map(function(z){return '<button class="sz" data-z="'+z+'" aria-pressed="'+(z==s.z)+'">'+z+'</button>'}).join("");
-  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho</span>'+sz+'</div>'+(p.e?'<button class="add">Adicionar à sacola</button>':'<button class="add" disabled>Esgotado</button>')+'</article>';
+  var current=p.variants.filter(function(v){return v.k==s.c})[0],available=current&&Array.isArray(current.z)?current.z:p.z;
+  if(available.indexOf(s.z)<0)s.z=null;
+  var sz=available.map(function(z){return '<button class="sz" data-z="'+z+'" aria-pressed="'+(z==s.z)+'">'+z+'</button>'}).join("");
+  var sizeNote=available.length?'<span class="lbl">Tamanhos disponíveis nesta cor</span>':'<span class="lbl">Esta cor está sem tamanhos disponíveis no momento.</span>';
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row size-row"><span class="lbl">'+sizeNote+'</span>'+sz+'</div>'+(p.e?'<button class="add" '+(available.length?'':'disabled')+'>Adicionar à sacola</button>':'<button class="add" disabled>Esgotado</button>')+'</article>';
 }
 function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
 function ok(p){
@@ -176,6 +179,10 @@ document.addEventListener("click",function(e){
       cd.querySelectorAll(".sw").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
       var im=cd.querySelector(".pic img");if(im&&p.imgs)im.src=p.imgs[t.dataset.k];var sv=cd.querySelector(".pic svg");if(sv)sv.setAttribute("fill",C[t.dataset.k][1]);
       cd.querySelector(".cn").textContent=C[t.dataset.k][0];
+      var current=p.variants.filter(function(v){return v.k==t.dataset.k})[0],available=current&&Array.isArray(current.z)?current.z:p.z;
+      sel[id].z=null;
+      cd.querySelector(".size-row").innerHTML='<span class="lbl">'+(available.length?'Tamanhos disponíveis nesta cor':'Esta cor está sem tamanhos disponíveis no momento.')+'</span>'+available.map(function(z){return '<button class="sz" data-z="'+z+'" aria-pressed="false">'+z+'</button>'}).join("");
+      var add=cd.querySelector(".add");if(add&&p.e)add.disabled=!available.length;
     }else if(t.classList.contains("sz")){
       sel[id].z=t.dataset.z;
       cd.querySelectorAll(".sz").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
@@ -218,10 +225,11 @@ function carregar(){
   fetch("/api/produtos").then(function(r){return r.json()}).then(function(rows){
     var cs={},rk=0;
     P=rows.map(function(d){
-      var vs=d.variantes&&d.variantes.length?d.variantes:[{cor:"Único",hex:"#cccccc"}],im={},ks=vs.map(function(v){var k=slug(v.cor);C[k]=[v.cor,v.hex||"#cccccc"];im[k]=v.imagem||d.imagem_url||"";return k});
+      var vs=d.variantes&&d.variantes.length?d.variantes:[{cor:"Único",hex:"#cccccc"}],im={},ks=[],variants=[];
+      vs.forEach(function(v){var k=slug(v.cor);C[k]=[v.cor,v.hex||"#cccccc"];im[k]=v.imagem||d.imagem_url||"";ks.push(k);variants.push({k:k,z:Array.isArray(v.tamanhos)?v.tamanhos:(d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"])});});
       var k=slug(d.categoria||"outros"),p=+d.preco,o=+d.preco_antigo||0,tem=ks.some(function(x){return im[x]});cs[k]=d.categoria;
       return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:d.em_estoque,
-        tag:d.em_estoque?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
+        tag:d.em_estoque?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],variants:variants,imgs:tem?im:null,r:d.destaque?++rk:0};
     });
     CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["ofertas","Ofertas","%"]]);
     render();

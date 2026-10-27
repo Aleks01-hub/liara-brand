@@ -37,4 +37,4 @@ public/img/        logo e fotos fixas (as fotos novas enviadas pelo painel ficam
 4. Aponte seu domínio para o serviço.
 
 ## WhatsApp
-O número fica na variável `WA` no início do `<script>` de `public/index.html` (formato 5588988745392).
+O número fica na variável `WA` no início do `<script>` de `public/index.html` (formato XXXXXXXXXXX).

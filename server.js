@@ -10,6 +10,12 @@ const db = new Pool({
   ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
 });
 app.use(express.json({ limit: "6mb" }));
+app.get("/health", (_q, res) => res.send("ok"));
+// Painel do dono: abre só em /admin (ou /adm). O arquivo fica fora da pasta public.
+app.get(["/admin", "/admin/", "/adm"], (_q, res) => {
+  res.set("X-Robots-Tag", "noindex");
+  res.sendFile(path.join(__dirname, "views", "admin.html"));
+});
 app.use(express.static(path.join(__dirname, "public")));
 
 const ah = (fn) => (req, res) =>

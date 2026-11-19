@@ -97,6 +97,13 @@ footer{background:var(--card);color:var(--mute);border-top:1px solid var(--line)
 #zoom img{max-width:100%;max-height:92vh;border-radius:12px}
 #zoom button{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:14px;background:none;border:0;color:#fff;font-size:30px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* Corrige colunas desiguais */
+.grid{grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr))}
+@media (max-width:640px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card,.sec,.row,.szs,.pic{min-width:0;max-width:100%}
+.card>*{min-width:0;max-width:100%}
+.card .pic{width:100%}
+html,body{max-width:100%;overflow-x:clip}
 </style>
 </head>
 <body>

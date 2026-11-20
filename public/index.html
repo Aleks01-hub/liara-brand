@@ -79,7 +79,7 @@ footer{background:var(--card);color:var(--mute);border-top:1px solid var(--line)
 .fld .bad{border-color:var(--acc)}
 .it{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
 .it button{background:none;border:0;color:var(--acc);font-weight:700}
-#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 18px;border-radius:999px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 18px;border-radius:16px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;text-align:center}
 #toast.on{opacity:1}
 @media (max-width:640px){.brand img{height:52px}.search{max-width:none}.grid{grid-template-columns:repeat(2,1fr);gap:12px}}
 .szs{width:100%;display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:2px 0}
@@ -117,7 +117,10 @@ html,body{max-width:100%;overflow-x:clip}
 #med .mbox{background:var(--bg);border-radius:16px;padding:18px;max-width:560px;width:100%;max-height:85vh;overflow:auto;position:relative}
 #med h2{margin:0 0 10px}#med table{width:100%;border-collapse:collapse}#med td,#med th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:center}
 #medx{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;color:var(--mute);cursor:pointer}
-.wa{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;background:#0f7a43;color:#fff;font-weight:700;text-decoration:none;border-radius:999px;padding:12px 18px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.wa{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;background:#128c4a;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.it{align-items:center}.it>span{flex:1}
+.mt0{flex:none;width:52px;height:65px;border-radius:8px;background:var(--card);overflow:hidden;display:grid;place-items:center}
+.mt0 img{width:100%;height:100%;object-fit:cover}.mt0 svg{width:70%;height:auto}
 </style>
 </head>
 <body>
@@ -154,7 +157,7 @@ html,body{max-width:100%;overflow-x:clip}
 </aside>
 <div id="zoom" hidden><img alt=""><button class="zx" aria-label="Fechar imagem">✕</button><button class="zn zp" aria-label="Foto anterior">‹</button><button class="zn zq" aria-label="Próxima foto">›</button><span id="zc"></span></div>
 <div id="med" hidden><div class="mbox"><button id="medx" aria-label="Fechar">✕</button><h2>Tabela de medidas</h2><div id="medt"></div></div></div>
-<a id="wa" class="wa" target="_blank" rel="noopener">WhatsApp</a>
+<a id="wa" class="wa" target="_blank" rel="noopener" aria-label="Falar com a loja no WhatsApp" title="Falar no WhatsApp"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="#fff" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/><path fill="#fff" d="M16.6 14.2c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-1.4-.7-2.4-1.3-3.3-2.9-.2-.3.2-.3.7-1.1.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.7.7-1 1.4-1 2.2 0 .9.4 1.8.9 2.5 1.3 1.8 2.9 3.1 5 3.9 1.9.7 2.3.5 2.7.5.7-.1 1.4-.6 1.6-1.2.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg></a>
 <div id="toast" role="status"></div>
 <script>
 var WA="5588988745392";/* número da loja com DDI+DDD, só dígitos. Ex.: 5588999999999 */
@@ -252,7 +255,7 @@ function checkout(){
 function upd(){
   salvarSacola();
   document.getElementById("count").textContent=cart.reduce(function(a,i){return a+i.q},0);
-  document.getElementById("items").innerHTML=cart.length?cart.map(function(i,k){return '<div class="it"><span><b>'+i.n+'</b><br>'+i.c+' · Tam. '+i.z+'<br>'+brl(i.p*i.q)+'<br><span class="qt"><button data-q="'+k+':-1" aria-label="Menos">−</button>'+i.q+'<button data-q="'+k+':1" aria-label="Mais">+</button></span></span><button data-rm="'+k+'">Remover</button></div>'}).join(""):'<p style="color:var(--mute)">Sua sacola está vazia. Escolha uma peça, cor e tamanho.</p>';
+  document.getElementById("items").innerHTML=cart.length?cart.map(function(i,k){return '<div class="it">'+mini(i)+'<span><b>'+i.n+'</b><br>'+i.c+' · Tam. '+i.z+'<br>'+brl(i.p*i.q)+'<br><span class="qt"><button data-q="'+k+':-1" aria-label="Menos">−</button>'+i.q+'<button data-q="'+k+':1" aria-label="Mais">+</button></span></span><button data-rm="'+k+'">Remover</button></div>'}).join(""):'<p style="color:var(--mute)">Sua sacola está vazia. Escolha uma peça, cor e tamanho.</p>';
   document.getElementById("total").textContent=brl(cart.reduce(function(a,i){return a+i.p*i.q},0));
 }
 /* Medidas: preencha com as medidas reais da loja (cm). Enquanto "linhas" estiver vazio, o link some. Ex.: linhas:[["P","86","66","92"],["M","90","70","96"]] */
@@ -286,6 +289,9 @@ function compartilhar(id){var p=P.filter(function(x){return x.id==id})[0],url=lo
   else if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){toast("Link da peça copiado")},function(){toast(url)})}else toast(url)}
 document.addEventListener("click",function(e){var b=e.target.closest("[data-shr]");if(b)compartilhar(+b.closest(".card").dataset.id)});
 function irHash(){var m=/^#p(\d+)$/.exec(location.hash);if(!m)return;var el=document.getElementById("p"+m[1]);if(el){el.scrollIntoView({block:"center"});el.classList.add("hl");setTimeout(function(){el.classList.remove("hl")},2500)}}
+function mini(i){var p=P.filter(function(x){return x.id==i.id})[0];if(!p)return'<div class="mt0"></div>';
+  var k=p.c.filter(function(k){return C[k][0]==i.c})[0]||p.c[0];
+  return'<div class="mt0">'+(p.imgs&&p.imgs[k]?'<img src="'+p.imgs[k]+'" alt="">':'<svg viewBox="0 0 100 120" fill="'+C[k][1]+'" stroke="rgba(35,31,28,.35)" stroke-width="2" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
 function slug(t){return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
 function carregar(){
   var sk=function(n){return new Array(n+1).join('<div class="sk"></div>')};

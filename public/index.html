@@ -3,24 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="apple-touch-icon" href="img/favicon.png">
+<meta name="theme-color" content="#1f2f46">
 <title>LIARA BRAND · Moda feminina e masculina</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Italiana&family=DM+Sans:wght@400;500;700&display=swap">
 <style>
-:root{--bg:#f7efe8;--ink:#231f1c;--mute:#7a6c62;--card:#efe3d8;--line:#e2d3c5;--acc:#9b6b52;--accink:#fff;--tan:#b8a08a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1816;--ink:#f3e9df;--mute:#aa9a8d;--card:#2a2421;--line:#3a322d;--acc:#c9967a;--accink:#1c1816}}
-:root[data-theme="dark"]{--bg:#1c1816;--ink:#f3e9df;--mute:#aa9a8d;--card:#2a2421;--line:#3a322d;--acc:#c9967a;--accink:#1c1816}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand img{filter:invert(1) hue-rotate(180deg)}}
-:root[data-theme="dark"] .brand img{filter:invert(1) hue-rotate(180deg)}
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--accink:#fffaf0;--tan:#b9c3d4;--hero:#1f2f46;--heroink:#fffaf0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--line:#3a4d6b;--acc:#fffaf0;--accink:#1f2f46;--tan:#b9c3d4;--hero:#2a3c57;--heroink:#fffaf0}}
+:root[data-theme="dark"]{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--line:#3a4d6b;--acc:#fffaf0;--accink:#1f2f46;--tan:#b9c3d4;--hero:#2a3c57;--heroink:#fffaf0}
+
+
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 84px);scroll-behavior:smooth}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "DM Sans",system-ui,sans-serif}
-h1,h2,h3{font-family:"Cormorant Garamond",Georgia,serif;margin:0;font-weight:600}
+h1,h2,h3{font-family:"Italiana","Cormorant Garamond",Georgia,serif;margin:0;font-weight:400}
 button{font:inherit;cursor:pointer;color:inherit}
 :focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .promo{background:var(--acc);color:var(--accink);text-align:center;font-size:14px;padding:8px 12px}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:16px;padding:8px 20px;max-width:1200px;margin:auto}
 .brand{display:block;line-height:0}
-.brand img{height:64px;width:auto}
+.brand img{height:54px;width:auto}.lg-d{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lg-l{display:none}:root:not([data-theme="light"]) .lg-d{display:block}}
+:root[data-theme="dark"] .lg-l{display:none}:root[data-theme="dark"] .lg-d{display:block}
 .search{flex:1;max-width:420px;margin-left:auto}
 .search input{width:100%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:10px 16px;font:inherit}
 .cartbtn{border:1.5px solid var(--acc);color:var(--acc);background:none;border-radius:999px;padding:8px 16px;font-weight:700;white-space:nowrap}
@@ -32,9 +37,9 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .bub[aria-pressed="true"] i{border-color:var(--acc)}
 .bub[aria-pressed="true"]{font-weight:700}
 .hero{max-width:1200px;margin:8px auto;padding:0 20px}
-.banner{background:var(--card);border-radius:22px;padding:clamp(24px,5vw,56px);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.banner{background:var(--hero);color:var(--heroink);border-radius:22px;padding:clamp(24px,5vw,56px);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
 .banner h1{font-size:clamp(38px,6vw,72px);line-height:1}
-.banner p{color:var(--mute);margin:10px 0 0;max-width:42ch}
+.banner p{color:var(--heroink);opacity:.82;margin:10px 0 0;max-width:42ch}
 .btn{border:0;border-radius:999px;padding:12px 24px;font-weight:700;text-decoration:none;display:inline-block;background:var(--acc);color:var(--accink)}
 .sec{max-width:1200px;margin:34px auto;padding:0 20px}
 .sec h2{font-size:clamp(30px,4vw,44px)}
@@ -52,7 +57,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .pic svg{width:60%;transition:fill .2s}
 .pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:14px}
 .tag{position:absolute;left:8px;top:8px;background:var(--acc);color:var(--accink);font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px}
-.rk{position:absolute;right:8px;top:8px;background:var(--tan);color:#231f1c;font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px}
+.rk{position:absolute;right:8px;top:8px;background:var(--tan);color:#1f2f46;font-size:12px;font-weight:700;border-radius:6px;padding:1px 8px}
 .card h3{font-family:"DM Sans",sans-serif;font-size:16px;font-weight:500;margin:10px 0 2px}
 .price b{font-size:18px;color:var(--acc)}
 .price s{color:var(--mute);font-size:14px;margin-left:6px}
@@ -81,7 +86,7 @@ footer{background:var(--card);color:var(--mute);border-top:1px solid var(--line)
 .it button{background:none;border:0;color:var(--acc);font-weight:700}
 #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);transform:translateX(-50%);background:var(--acc);color:var(--accink);padding:10px 18px;border-radius:16px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;text-align:center}
 #toast.on{opacity:1}
-@media (max-width:640px){.brand img{height:52px}.search{max-width:none}.grid{grid-template-columns:repeat(2,1fr);gap:12px}}
+@media (max-width:640px){.brand img{height:46px}.search{max-width:none}.grid{grid-template-columns:repeat(2,1fr);gap:12px}}
 .szs{width:100%;display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:2px 0}
 .szs::-webkit-scrollbar{display:none}.szs .sz{flex:none}
 .szs.fr{-webkit-mask-image:linear-gradient(to right,#000 80%,transparent);mask-image:linear-gradient(to right,#000 80%,transparent)}
@@ -126,8 +131,8 @@ html,body{max-width:100%;overflow-x:clip}
 <body>
 <div class="promo" id="promo" hidden></div>
 <header>
-  <a class="brand" href="#top" aria-label="LIARA BRAND"><img src="img/logo.png" alt="LIARA BRAND"></a>
-  <div class="search"><input id="q" type="search" placeholder="Buscar peças" aria-label="Buscar peças"></div>
+  <a class="brand" href="#top" aria-label="LIARA BRAND"><img class="lg-l" src="img/logo-navy.png" alt="LIARA BRAND"><img class="lg-d" src="img/logo-cream.png" alt="" aria-hidden="true"></a>
+  <div class="search"><input id="q" type="search" placeholder="Buscar" aria-label="Buscar peças"></div>
   <button class="cartbtn" id="openCart" aria-label="Abrir sacola">Sacola<b id="count">0</b></button>
 </header>
 <nav class="bubs" id="bubs" aria-label="Categorias"></nav>
@@ -188,7 +193,7 @@ var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
 function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
-function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(35,31,28,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
+function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
   var sw=p.c.map(function(k){return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" style="background:'+C[k][1]+'"></button>'}).join("");
@@ -291,7 +296,7 @@ document.addEventListener("click",function(e){var b=e.target.closest("[data-shr]
 function irHash(){var m=/^#p(\d+)$/.exec(location.hash);if(!m)return;var el=document.getElementById("p"+m[1]);if(el){el.scrollIntoView({block:"center"});el.classList.add("hl");setTimeout(function(){el.classList.remove("hl")},2500)}}
 function mini(i){var p=P.filter(function(x){return x.id==i.id})[0];if(!p)return'<div class="mt0"></div>';
   var k=p.c.filter(function(k){return C[k][0]==i.c})[0]||p.c[0];
-  return'<div class="mt0">'+(p.imgs&&p.imgs[k]?'<img src="'+p.imgs[k]+'" alt="">':'<svg viewBox="0 0 100 120" fill="'+C[k][1]+'" stroke="rgba(35,31,28,.35)" stroke-width="2" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
+  return'<div class="mt0">'+(p.imgs&&p.imgs[k]?'<img src="'+p.imgs[k]+'" alt="">':'<svg viewBox="0 0 100 120" fill="'+C[k][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="2" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
 function slug(t){return String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
 function carregar(){
   var sk=function(n){return new Array(n+1).join('<div class="sk"></div>')};

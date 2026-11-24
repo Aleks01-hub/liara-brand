@@ -417,14 +417,14 @@ app.post("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
     if (!p) { await client.query("ROLLBACK"); return res.status(404).json({ erro: "Produto não encontrado." }); }
     const variantes = Array.isArray(p.variantes) && p.variantes.length ? p.variantes : [{cor:"Único"}];
     const tamanhos = Array.isArray(p.tamanhos) && p.tamanhos.length ? p.tamanhos : ["Único"];
-    if (!variantes.some(v => String(v.cor || "Único").trim().toLowerCase() === cor.toLowerCase()) ||
-        !tamanhos.includes(tamanho)) {
+    const corCanonica = variantes.map(v => String(v.cor || "Único").trim()).find(v => v.toLowerCase() === cor.toLowerCase());
+    if (!corCanonica || !tamanhos.includes(tamanho)) {
       await client.query("ROLLBACK");
       return res.status(400).json({ erro: "A cor ou o tamanho não pertence a esse produto." });
     }
     const existing = await client.query(
-      "SELECT quantidade FROM estoque_variantes WHERE produto_id=$1 AND lower(cor)=lower($2) AND tamanho=$3 FOR UPDATE",
-      [produtoId,cor,tamanho]
+      "SELECT quantidade FROM estoque_variantes WHERE produto_id=$1 AND cor=$2 AND tamanho=$3 FOR UPDATE",
+      [produtoId,corCanonica,tamanho]
     );
     const anterior = existing.rows[0] ? Number(existing.rows[0].quantidade) : 0;
     const nova = tipo === "entrada" ? anterior + quantidade : tipo === "saida" ? anterior - quantidade : quantidade;
@@ -434,11 +434,11 @@ app.post("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
       VALUES($1,$2,$3,$4,now())
       ON CONFLICT(produto_id,cor,tamanho)
       DO UPDATE SET quantidade=EXCLUDED.quantidade,atualizado_em=now()
-    `, [produtoId,cor,tamanho,nova]);
+    `, [produtoId,corCanonica,tamanho,nova]);
     const mov = await client.query(`
       INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
-    `, [produtoId,p.nome,cor,tamanho,tipo,quantidade,anterior,nova,observacao || null]);
+    `, [produtoId,p.nome,corCanonica,tamanho,tipo,quantidade,anterior,nova,observacao || null]);
     await client.query("COMMIT");
     res.status(201).json(mov.rows[0]);
   } catch (error) {

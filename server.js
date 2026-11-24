@@ -165,6 +165,169 @@ app.delete("/api/admin/cupons/:id", auth, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+
+// Estrutura inicial de pedidos: o catálogo registra o pedido antes de abrir o WhatsApp.
+const ordersTableReady = couponTableReady.then(() => db.query(`
+  CREATE TABLE IF NOT EXISTS pedidos (
+    id BIGSERIAL PRIMARY KEY,
+    codigo VARCHAR(32) NOT NULL UNIQUE,
+    cliente_nome VARCHAR(120) NOT NULL,
+    endereco_entrega TEXT NOT NULL,
+    forma_pagamento VARCHAR(20) NOT NULL CHECK (forma_pagamento IN ('Pix','Cartão','Dinheiro')),
+    precisa_troco BOOLEAN NOT NULL DEFAULT FALSE,
+    troco_para NUMERIC(10,2),
+    subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0),
+    desconto NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (desconto >= 0),
+    total NUMERIC(10,2) NOT NULL CHECK (total >= 0),
+    cupom_id BIGINT REFERENCES cupons(id) ON DELETE SET NULL,
+    cupom_codigo VARCHAR(40),
+    status VARCHAR(20) NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','confirmado','cancelado')),
+    origem VARCHAR(20) NOT NULL DEFAULT 'catalogo' CHECK (origem IN ('catalogo','pdv')),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    confirmado_em TIMESTAMPTZ,
+    cancelado_em TIMESTAMPTZ,
+    CHECK ((precisa_troco = FALSE AND troco_para IS NULL) OR (precisa_troco = TRUE AND forma_pagamento = 'Dinheiro' AND troco_para > total))
+  );
+  CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em DESC);
+  CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
+  CREATE TABLE IF NOT EXISTS pedido_itens (
+    id BIGSERIAL PRIMARY KEY,
+    pedido_id BIGINT NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    produto_id INTEGER REFERENCES produtos(id) ON DELETE SET NULL,
+    produto_nome VARCHAR(120) NOT NULL,
+    cor VARCHAR(60) NOT NULL,
+    tamanho VARCHAR(30) NOT NULL,
+    quantidade INTEGER NOT NULL CHECK (quantidade > 0),
+    preco_unitario NUMERIC(10,2) NOT NULL CHECK (preco_unitario >= 0),
+    subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0)
+  );
+  CREATE INDEX IF NOT EXISTS idx_pedido_itens_pedido ON pedido_itens(pedido_id);
+`)).then(() => true).catch((error) => {
+  console.error("Não foi possível preparar as tabelas de pedidos:", error.message);
+  throw error;
+});
+
+function valorMonetario(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.round((n + Number.EPSILON) * 100) / 100 : null;
+}
+
+// Cria pedido pendente usando preço e disponibilidade consultados no banco, nunca os valores enviados pelo navegador.
+app.post("/api/pedidos", ah(async (req, res) => {
+  await ordersTableReady;
+  const body = req.body || {};
+  const nome = String(body.nome || "").trim();
+  const endereco = String(body.endereco || "").trim();
+  const pagamento = String(body.pagamento || "");
+  const itens = Array.isArray(body.itens) ? body.itens : [];
+  if (!nome || nome.length > 120 || !endereco || endereco.length > 1000) {
+    return res.status(400).json({ erro: "Informe nome e endereço válidos." });
+  }
+  if (!["Pix", "Cartão", "Dinheiro"].includes(pagamento)) {
+    return res.status(400).json({ erro: "Forma de pagamento inválida." });
+  }
+  if (!itens.length || itens.length > 50) return res.status(400).json({ erro: "A sacola está vazia ou possui itens demais." });
+  const normalizados = [];
+  for (const item of itens) {
+    const id = Number(item.id), quantidade = Number(item.q);
+    const cor = String(item.c || "").trim(), tamanho = String(item.z || "").trim();
+    if (!Number.isSafeInteger(id) || id < 1 || !Number.isInteger(quantidade) || quantidade < 1 || quantidade > 50 || !cor || cor.length > 60 || !tamanho || tamanho.length > 30) {
+      return res.status(400).json({ erro: "Há um item inválido na sacola. Confira cor, tamanho e quantidade." });
+    }
+    normalizados.push({ id, quantidade, cor, tamanho });
+  }
+  const precisaTroco = pagamento === "Dinheiro" && body.precisa_troco === true;
+  const trocoPara = precisaTroco ? valorMonetario(body.troco_para) : null;
+  if (pagamento !== "Dinheiro" && (body.precisa_troco === true || body.troco_para != null)) {
+    return res.status(400).json({ erro: "Troco só pode ser informado para pagamento em dinheiro." });
+  }
+  if (precisaTroco && trocoPara === null) return res.status(400).json({ erro: "Valor de troco inválido." });
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const ids = [...new Set(normalizados.map((i) => i.id))];
+    const encontrados = await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque FROM produtos WHERE id = ANY($1::int[]) FOR SHARE", [ids]);
+    const produtos = new Map(encontrados.rows.map((p) => [Number(p.id), p]));
+    let subtotal = 0;
+    const linhas = [];
+    for (const item of normalizados) {
+      const p = produtos.get(item.id);
+      if (!p || !p.em_estoque) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ erro: "Um produto não está mais disponível. Atualize a página e confira a sacola." });
+      }
+      const variantes = Array.isArray(p.variantes) && p.variantes.length ? p.variantes : [{ cor: "Único" }];
+      const tamanhos = Array.isArray(p.tamanhos) && p.tamanhos.length ? p.tamanhos : ["Único"];
+      if (!variantes.some((v) => String(v.cor || "").trim().toLowerCase() === item.cor.toLowerCase()) || !tamanhos.includes(item.tamanho)) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ erro: "A cor ou o tamanho de um produto mudou. Atualize a página e tente novamente." });
+      }
+      const preco = valorMonetario(p.preco);
+      if (preco === null) throw new Error("Preço inválido cadastrado no produto " + p.id);
+      const linhaSubtotal = Math.round(preco * item.quantidade * 100) / 100;
+      subtotal += linhaSubtotal;
+      linhas.push({ ...item, nome: p.nome, preco, subtotal: linhaSubtotal });
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+    if (precisaTroco && trocoPara <= subtotal) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ erro: "O valor informado para troco precisa ser maior que o total." });
+    }
+    const codigo = "LB-" + Date.now().toString(36).toUpperCase() + "-" + require("crypto").randomBytes(3).toString("hex").toUpperCase();
+    const pedido = await client.query(
+      "INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,total) VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING id,codigo,status,subtotal,total,criado_em",
+      [codigo,nome,endereco,pagamento,precisaTroco,trocoPara,subtotal]
+    );
+    for (const item of linhas) {
+      await client.query(
+        "INSERT INTO pedido_itens(pedido_id,produto_id,produto_nome,cor,tamanho,quantidade,preco_unitario,subtotal) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+        [pedido.rows[0].id,item.id,item.nome,item.cor,item.tamanho,item.quantidade,item.preco,item.subtotal]
+      );
+    }
+    await client.query("COMMIT");
+    res.status(201).json({ ...pedido.rows[0], pagamento, precisa_troco: precisaTroco, troco_para: trocoPara });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
+// Consulta administrativa de pedidos e seus itens.
+app.get("/api/admin/pedidos", auth, ah(async (_req, res) => {
+  await ordersTableReady;
+  const result = await db.query(`
+    SELECT p.*,
+      COALESCE(json_agg(json_build_object(
+        'produto_id', i.produto_id, 'nome', i.produto_nome, 'cor', i.cor,
+        'tamanho', i.tamanho, 'quantidade', i.quantidade,
+        'preco_unitario', i.preco_unitario, 'subtotal', i.subtotal
+      )) FILTER (WHERE i.id IS NOT NULL), '[]'::json) AS itens
+    FROM pedidos p
+    LEFT JOIN pedido_itens i ON i.pedido_id = p.id
+    GROUP BY p.id
+    ORDER BY p.criado_em DESC, p.id DESC
+    LIMIT 200
+  `);
+  res.json(result.rows);
+}));
+
+// O pedido só pode sair de pendente uma vez; confirmado/cancelado são estados finais nesta primeira versão.
+app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
+  await ordersTableReady;
+  const status = String(req.body?.status || "");
+  if (!["confirmado", "cancelado"].includes(status)) return res.status(400).json({ erro: "Status inválido." });
+  const result = await db.query(
+    "UPDATE pedidos SET status=$1,atualizado_em=now(),confirmado_em=CASE WHEN $1='confirmado' THEN now() ELSE confirmado_em END,cancelado_em=CASE WHEN $1='cancelado' THEN now() ELSE cancelado_em END WHERE id=$2 AND status='pendente' RETURNING *",
+    [status, Number(req.params.id)]
+  );
+  if (!result.rows[0]) return res.status(409).json({ erro: "Pedido não encontrado ou já finalizado." });
+  res.json(result.rows[0]);
+}));
+
 // Catálogo público
 app.get("/api/produtos", ah(async (_req, res) => {
   const result = await db.query("SELECT * FROM produtos ORDER BY id");

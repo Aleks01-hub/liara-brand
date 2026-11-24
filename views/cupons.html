@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Cupons · LIARA BRAND</title>
+<style>
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#fff;--soft:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--ai:#fffaf0;--ok:#2f8f6b;--bad:#b3392f}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--soft:#34476a;--line:#3a4d6b;--acc:#fffaf0;--ai:#1f2f46;--ok:#4cb48b;--bad:#e5766c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:3px solid var(--acc);outline-offset:2px}[hidden]{display:none!important}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 16px}.bar b{font:700 20px Georgia,serif;letter-spacing:.04em}.bar nav{margin-left:auto;display:flex;gap:12px;align-items:center}.bar a{color:var(--acc);font-weight:700;text-decoration:none}
+main{max-width:980px;margin:auto;padding:18px 16px 50px}.intro{margin:8px 0 18px}.intro h1{margin:0 0 4px;font-size:26px}.muted{color:var(--mute);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.stats div,.coupon{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px}.stats b{display:block;font-size:24px}.stats span{font-size:12px;color:var(--mute)}
+.toolbar{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px}.toolbar select{min-width:145px}
+input,select{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.btn{border:0;border-radius:10px;padding:10px 15px;font-weight:700;background:var(--acc);color:var(--ai)}.btn.alt{background:none;color:var(--acc);border:1.5px solid var(--acc)}.btn.small{padding:7px 10px;font-size:13px}.btn.danger{color:var(--bad);border-color:var(--bad);background:none}
+.coupon{display:grid;grid-template-columns:1fr auto;gap:8px;margin:10px 0}.coupon h3{margin:0;font-size:18px;letter-spacing:.04em}.coupon p{margin:3px 0}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.status{display:inline-block;padding:3px 8px;border-radius:99px;background:var(--soft);font-size:12px;font-weight:700}.status.good{color:var(--ok)}.status.bad{color:var(--bad)}
+.overlay{position:fixed;inset:0;background:#0008;display:flex;align-items:flex-end;justify-content:center;z-index:10}.sheet{background:var(--bg);width:100%;max-width:680px;max-height:94vh;overflow:auto;border-radius:18px 18px 0 0}.head,.foot{position:sticky;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 16px;z-index:2}.head{top:0;justify-content:space-between;border-bottom:1px solid var(--line)}.head h2{margin:0}.foot{bottom:0;border-top:1px solid var(--line)}.foot .btn{flex:1}.body{padding:14px 16px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fields label{display:grid;gap:5px;font-size:13px;color:var(--mute)}.wide{grid-column:1/-1}.code-row{display:grid;grid-template-columns:1fr auto;gap:8px}.note{background:var(--soft);padding:12px;border-radius:10px;color:var(--mute);font-size:13px;margin:0 0 14px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;z-index:30;max-width:92vw}#toast.on{opacity:1}
+@media(min-width:700px){.overlay{align-items:center}.sheet{border-radius:18px}}@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.fields{grid-template-columns:1fr}.wide{grid-column:auto}.coupon{grid-template-columns:1fr}.toolbar>*{flex:1}}
+</style></head><body>
+<header class="bar"><b>LIARA <span style="font-weight:400">Cupons</span></b><nav><a href="/admin">← Painel</a><button class="btn alt small" id="logout">Sair</button></nav></header>
+<main>
+<section class="intro"><h1>Gerenciador de cupons</h1><div class="muted">Crie e administre os códigos promocionais da loja. Esta área é administrativa; os cupons ainda não estão disponíveis no catálogo.</div></section>
+<p class="note">Importante: o cadastro e as regras dos cupons já ficam salvos no banco. A contagem de utilizações só será atualizada quando os pedidos tiverem registro e confirmação de venda — não apenas quando alguém abrir o WhatsApp.</p>
+<div class="stats" id="stats"></div>
+<div class="toolbar"><input id="search" type="search" placeholder="Buscar código"><select id="filter"><option value="">Todos os status</option><option value="ativo">Ativos</option><option value="inativo">Inativos</option><option value="expirado">Expirados</option></select><button class="btn" id="new">+ Criar cupom</button></div>
+<div id="list"><p class="muted">Carregando cupons...</p></div>
+</main>
+<div class="overlay" id="modal" hidden><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+<div class="head"><h2 id="formTitle">Novo cupom</h2><button class="btn alt small" id="close">Fechar</button></div>
+<div class="body">
+<div class="fields">
+<label class="wide">Código do cupom<div class="code-row"><input id="code" maxlength="40" placeholder="EX.: BEMVINDO10" autocomplete="off"><button class="btn alt" id="generate" type="button">Gerar código</button></div></label>
+<label>Tipo de desconto<select id="type"><option value="percentual">Porcentagem (%)</option><option value="fixo">Valor fixo (R$)</option></select></label>
+<label>Valor do desconto<input id="value" type="number" min="0.01" step="0.01" placeholder="Ex.: 10"></label>
+<label>Pedido mínimo (R$)<input id="minimum" type="number" min="0" step="0.01" value="0"></label>
+<label>Início da validade<input id="start" type="date"></label>
+<label>Fim da validade<input id="end" type="date"></label>
+<label>Limite de utilizações<input id="limit" type="number" min="1" step="1" placeholder="Sem limite"></label>
+<label style="align-content:end"><span>Disponibilidade</span><span><input id="active" type="checkbox" checked style="width:auto"> Cupom ativo</span></label>
+</div>
+</div>
+<div class="foot"><button class="btn alt" id="cancel">Cancelar</button><button class="btn" id="save">Salvar cupom</button></div>
+</section></div>
+<div id="toast" role="status"></div>
+<script>
+var token=localStorage.getItem("tk"),coupons=[],editing=null,$=function(id){return document.getElementById(id)};
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function money(v){return "R$ "+Number(v||0).toFixed(2).replace(".",",")}
+function toast(t){$("toast").textContent=t;$("toast").className="on";clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").className=""},2600)}
+function api(url,method,data){return fetch(url,{method:method||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:data?JSON.stringify(data):undefined}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.erro||"Não foi possível concluir a operação.");return d})}).catch(function(e){if(e.message==="Não autorizado"){localStorage.removeItem("tk");location.href="/admin";return}throw e})}
+function dateStatus(c){var today=new Date().toISOString().slice(0,10);if(!c.ativo)return "inativo";if(c.data_inicio&&c.data_inicio.slice(0,10)>today)return "agendado";if(c.data_fim&&c.data_fim.slice(0,10)<today)return "expirado";if(c.limite_usos!=null&&c.usos>=c.limite_usos)return "esgotado";return "ativo"}
+function statusLabel(s){return ({ativo:"Ativo",inativo:"Desativado",agendado:"Agendado",expirado:"Expirado",esgotado:"Limite atingido"})[s]||s}
+function render(){var active=coupons.filter(function(c){return dateStatus(c)==="ativo"}).length;$("stats").innerHTML=[["Cupons cadastrados",coupons.length],["Ativos",active],["Desativados",coupons.filter(function(c){return !c.ativo}).length],["Usos registrados",coupons.reduce(function(n,c){return n+Number(c.usos||0)},0)]].map(function(x){return "<div><b>"+x[1]+"</b><span>"+x[0]+"</span></div>"}).join("");
+var q=$("search").value.trim().toUpperCase(),f=$("filter").value;var rows=coupons.filter(function(c){var s=dateStatus(c);return (!q||c.codigo.indexOf(q)>=0)&&(!f||(f==="ativo"?s==="ativo":f==="inativo"?!c.ativo:s==="expirado"))});
+$("list").innerHTML=rows.map(function(c){var s=dateStatus(c),discount=c.tipo_desconto==="percentual"?Number(c.valor_desconto)+"%":money(c.valor_desconto),valid=(c.data_inicio?c.data_inicio.slice(0,10):"Imediato")+" até "+(c.data_fim?c.data_fim.slice(0,10):"Sem término"),limit=c.limite_usos==null?"Sem limite":c.usos+" / "+c.limite_usos;
+return '<article class="coupon" data-id="'+c.id+'"><div><h3>'+esc(c.codigo)+'</h3><p><b>'+discount+' de desconto</b> · Pedido mínimo: '+money(c.valor_minimo)+'</p><p class="muted">Validade: '+valid+' · Utilizações: '+limit+'</p><span class="status '+(s==="ativo"?"good":s==="expirado"||s==="esgotado"?"bad":"")+'">'+statusLabel(s)+'</span></div><div class="actions"><button class="btn alt small" data-copy>Copiar</button><button class="btn alt small" data-edit>Editar</button><button class="btn alt small" data-toggle>'+(c.ativo?"Desativar":"Ativar")+'</button><button class="btn danger small" data-delete>Excluir</button></div></article>'}).join("")||'<div class="muted" style="padding:30px;text-align:center">Nenhum cupom encontrado.</div>'}
+function load(){api("/api/admin/cupons").then(function(d){coupons=d;render()}).catch(function(e){$("list").textContent=e.message;toast(e.message)})}
+function reset(){editing=null;$("formTitle").textContent="Novo cupom";["code","value","start","end","limit"].forEach(function(id){$(id).value=""});$("type").value="percentual";$("minimum").value="0";$("active").checked=true;$("modal").hidden=false}
+function edit(c){editing=c;$("formTitle").textContent="Editar cupom";$("code").value=c.codigo;$("type").value=c.tipo_desconto;$("value").value=c.valor_desconto;$("minimum").value=c.valor_minimo;$("start").value=c.data_inicio?c.data_inicio.slice(0,10):"";$("end").value=c.data_fim?c.data_fim.slice(0,10):"";$("limit").value=c.limite_usos==null?"":c.limite_usos;$("active").checked=c.ativo;$("modal").hidden=false}
+function close(){ $("modal").hidden=true }
+function generate(){var chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",code="LIARA";for(var i=0;i<6;i++)code+=chars[Math.floor(Math.random()*chars.length)];$("code").value=code}
+function formData(){return {codigo:$("code").value.trim().toUpperCase(),tipo_desconto:$("type").value,valor_desconto:$("value").value,valor_minimo:$("minimum").value,data_inicio:$("start").value||null,data_fim:$("end").value||null,limite_usos:$("limit").value||null,ativo:$("active").checked}}
+$("new").onclick=reset;$("generate").onclick=generate;$("close").onclick=close;$("cancel").onclick=close;$("search").oninput=render;$("filter").onchange=render;$("logout").onclick=function(){localStorage.removeItem("tk");location.href="/admin"};
+$("save").onclick=function(){var d=formData();if(!d.codigo||!d.valor_desconto)return toast("Informe o código e o valor do desconto.");if(d.data_inicio&&d.data_fim&&d.data_fim<d.data_inicio)return toast("A data final não pode ser anterior à inicial.");$("save").disabled=true;api(editing?"/api/admin/cupons/"+editing.id:"/api/admin/cupons",editing?"PUT":"POST",d).then(function(){close();toast(editing?"Cupom atualizado.":"Cupom criado.");load()}).catch(function(e){toast(e.message)}).finally(function(){$("save").disabled=false})};
+$("list").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var card=b.closest("[data-id]"),c=coupons.find(function(x){return x.id==card.dataset.id});if(!c)return;
+if(b.dataset.copy!==undefined){if(navigator.clipboard)navigator.clipboard.writeText(c.codigo).then(function(){toast("Código copiado.")},function(){toast("Não foi possível copiar.")});else toast(c.codigo)}
+else if(b.dataset.edit!==undefined)edit(c);
+else if(b.dataset.toggle!==undefined)api("/api/admin/cupons/"+c.id+"/status","PATCH",{ativo:!c.ativo}).then(function(){toast(c.ativo?"Cupom desativado.":"Cupom ativado.");load()}).catch(function(e){toast(e.message)});
+else if(b.dataset.delete!==undefined){if(confirm('Excluir o cupom "'+c.codigo+'"?'))api("/api/admin/cupons/"+c.id,"DELETE").then(function(){toast("Cupom excluído.");load()}).catch(function(e){toast(e.message)})}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!$("modal").hidden)close()});
+if(!token){location.href="/admin"}else load();
+</script></body></html>

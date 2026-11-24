@@ -56,14 +56,14 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
 .seg{display:flex;border:1.5px solid var(--acc);border-radius:10px;overflow:hidden}.seg button{flex:1;border:0;background:none;padding:10px;font-weight:700;color:var(--acc)}
 .seg button[aria-pressed="true"]{background:var(--acc);color:var(--ai)}
 .fr{display:flex;gap:14px;align-items:center}.fp{width:96px;height:120px;border-radius:10px;background:var(--soft);overflow:hidden;display:grid;place-items:center;color:var(--mute);font-size:12px;flex:none}
-.cr{display:grid;grid-template-columns:44px 1fr 44px auto auto;gap:8px;align-items:center;margin-bottom:8px}.cr input[type=color]{padding:2px;height:40px}
+.cr{display:grid;grid-template-columns:44px minmax(0,1fr) 44px auto auto auto;gap:8px;align-items:center;margin-bottom:8px}.move{display:flex;gap:3px}.move button{border:1px solid var(--line);background:none;border-radius:7px;padding:5px 8px;font-weight:700}.move button:disabled{opacity:.35;cursor:not-allowed}.cr input[type=color]{padding:2px;height:40px}
 .ph{width:44px;height:44px;border-radius:8px;background:var(--soft);overflow:hidden;display:grid;place-items:center;font-size:10px;color:var(--mute);text-align:center}
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1.5px solid var(--line);background:none;border-radius:99px;padding:5px 12px;font-weight:700;font-size:13px}
 .chip[aria-pressed="true"]{background:var(--acc);color:var(--ai);border-color:var(--acc)}
 .add{display:grid;grid-template-columns:1fr auto;gap:8px}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:92vw;text-align:center}
 #toast.on{opacity:1}#toast.bad{background:var(--bad);color:#fff}
-@media(max-width:700px){.tool{grid-template-columns:1fr 1fr}.tool #busca,.tool #novo{grid-column:1/-1}.stats{grid-template-columns:repeat(2,1fr)}.cr{grid-template-columns:44px 1fr 44px auto}.cr .x{grid-column:4}.cr .btn{grid-column:2/4}}
+@media(max-width:700px){.tool{grid-template-columns:1fr 1fr}.tool #busca,.tool #novo{grid-column:1/-1}.stats{grid-template-columns:repeat(2,1fr)}.cr{grid-template-columns:44px minmax(0,1fr) 44px auto auto}.cr .move{grid-column:4}.cr .x{grid-column:5}.cr .btn{grid-column:2/4}}
 </style></head><body>
 <header class="bar"><b>LIARA <span>Painel</span></b><nav><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn g sm" id="sair" hidden>Sair</button></nav></header>
 <main>
@@ -163,7 +163,7 @@ function abrir(p){F=p?JSON.parse(JSON.stringify(p)):{genero:"Feminino",variantes
 function pintar(){document.querySelectorAll("[data-g]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.g==F.genero)});foto();cores();tams();nota()}
 function nota(){var a=+$("f_antigo").value,p=+$("f_preco").value;$("nota").textContent=a>p&&p>0?"Desconto de "+Math.round((1-p/a)*100)+"% aparece no site.":(a&&a<=p?"O preço antigo precisa ser maior que o preço atual.":"")}
 function foto(){$("fprev").innerHTML=F.imagem_url?'<img src="'+esc(F.imagem_url)+'" alt="">':"sem foto";$("frm").hidden=!F.imagem_url}
-function cores(){$("cores").innerHTML=F.variantes.map(function(v,i){return '<div class="cr" data-i="'+i+'"><input type="color" data-k="hex" aria-label="Cor" value="'+(/^#[0-9a-f]{6}$/i.test(v.hex)?v.hex:"#cccccc")+'"><input data-k="cor" value="'+esc(v.cor)+'" placeholder="Nome da cor" aria-label="Nome da cor"><span class="ph">'+(v.imagem?'<img src="'+esc(v.imagem)+'" alt="">':"sem foto")+'</span><label class="btn g sm">Foto<input type="file" accept="image/*" hidden data-k="img"></label><button class="x" data-rc aria-label="Remover cor">✕</button></div>'}).join("")||'<p class="mt" style="margin:0">Nenhuma cor ainda. Toque em uma sugestão ou em "Adicionar cor".</p>'}
+function cores(){$("cores").innerHTML=F.variantes.map(function(v,i){return '<div class="cr" data-i="'+i+'"><input type="color" data-k="hex" aria-label="Cor" value="'+(/^#[0-9a-f]{6}$/i.test(v.hex)?v.hex:"#cccccc")+'"><input data-k="cor" value="'+esc(v.cor)+'" placeholder="Nome da cor" aria-label="Nome da cor"><span class="ph">'+(v.imagem?'<img src="'+esc(v.imagem)+'" alt="">':"sem foto")+'</span><label class="btn g sm">Foto<input type="file" accept="image/*" hidden data-k="img"></label><span class="move"><button type="button" data-up aria-label="Mover cor para cima" title="Mover para cima" '+(i===0?"disabled":"")+'">↑</button><button type="button" data-down aria-label="Mover cor para baixo" title="Mover para baixo" '+(i===F.variantes.length-1?"disabled":"")+'">↓</button></span><button class="x" data-rc aria-label="Remover cor">✕</button></div>'}).join("")||'<p class="mt" style="margin:0">Nenhuma cor ainda. Toque em uma sugestão ou em "Adicionar cor".</p>'}
 function tams(){var t=TAM.slice();F.tamanhos.forEach(function(x){if(t.indexOf(x)<0)t.push(x)});$("tams").innerHTML=t.map(function(x){return '<button class="chip" data-t="'+esc(x)+'" aria-pressed="'+(F.tamanhos.indexOf(x)>=0)+'">'+esc(x)+"</button>"}).join("")}
 function ordenar(){var t=TAM.slice();F.tamanhos.forEach(function(x){if(t.indexOf(x)<0)t.push(x)});F.tamanhos=t.filter(function(x){return F.tamanhos.indexOf(x)>=0})}
 function fechar(){if(dirty&&!confirm("Descartar as alterações deste produto?"))return;dirty=false;$("modal").hidden=true;document.body.style.overflow=""}
@@ -173,7 +173,7 @@ $("modal").addEventListener("click",function(e){if(e.target.id=="modal")return f
   if(b.dataset.g){F.genero=b.dataset.g;dirty=true;pintar()}
   else if(b.dataset.t){var i=F.tamanhos.indexOf(b.dataset.t);if(i>=0)F.tamanhos.splice(i,1);else F.tamanhos.push(b.dataset.t);ordenar();dirty=true;tams()}
   else if(b.dataset.pre){if(!F.variantes.some(function(v){return v.cor.toLowerCase()==b.dataset.pre.toLowerCase()})){F.variantes.push({cor:b.dataset.pre,hex:b.dataset.hex,imagem:""});dirty=true;cores()}else toast("Essa cor já foi adicionada",true)}
-  else if(b.dataset.rc!==undefined){F.variantes.splice(+b.closest(".cr").dataset.i,1);dirty=true;cores()}
+  else if(b.dataset.up!==undefined||b.dataset.down!==undefined){var i=+b.closest(".cr").dataset.i,j=i+(b.dataset.up!==undefined?-1:1);if(j>=0&&j<F.variantes.length){var v=F.variantes.splice(i,1)[0];F.variantes.splice(j,0,v);dirty=true;cores()}}\n  else if(b.dataset.rc!==undefined){F.variantes.splice(+b.closest(".cr").dataset.i,1);dirty=true;cores()}
   else if(b.id=="addc"){F.variantes.push({cor:"",hex:"#cccccc",imagem:""});dirty=true;cores()}
   else if(b.id=="addt"){var v=$("f_tam").value.trim();if(v){if(F.tamanhos.indexOf(v)<0)F.tamanhos.push(v);ordenar();$("f_tam").value="";dirty=true;tams()}}
   else if(b.id=="frm"){F.imagem_url="";dirty=true;foto()}

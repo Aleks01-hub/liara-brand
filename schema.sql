@@ -41,3 +41,42 @@ CREATE TABLE IF NOT EXISTS cupons (
   CHECK (tipo_desconto <> 'percentual' OR valor_desconto <= 100)
 );
 CREATE INDEX IF NOT EXISTS idx_cupons_ativo_validade ON cupons (ativo, data_inicio, data_fim);
+
+
+-- Pedidos recebidos pelo catálogo e, futuramente, pelo PDV.
+CREATE TABLE IF NOT EXISTS pedidos (
+  id BIGSERIAL PRIMARY KEY,
+  codigo VARCHAR(32) NOT NULL UNIQUE,
+  cliente_nome VARCHAR(120) NOT NULL,
+  endereco_entrega TEXT NOT NULL,
+  forma_pagamento VARCHAR(20) NOT NULL CHECK (forma_pagamento IN ('Pix','Cartão','Dinheiro')),
+  precisa_troco BOOLEAN NOT NULL DEFAULT FALSE,
+  troco_para NUMERIC(10,2),
+  subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0),
+  desconto NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (desconto >= 0),
+  total NUMERIC(10,2) NOT NULL CHECK (total >= 0),
+  cupom_id BIGINT REFERENCES cupons(id) ON DELETE SET NULL,
+  cupom_codigo VARCHAR(40),
+  status VARCHAR(20) NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','confirmado','cancelado')),
+  origem VARCHAR(20) NOT NULL DEFAULT 'catalogo' CHECK (origem IN ('catalogo','pdv')),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  confirmado_em TIMESTAMPTZ,
+  cancelado_em TIMESTAMPTZ,
+  CHECK ((precisa_troco = FALSE AND troco_para IS NULL) OR (precisa_troco = TRUE AND forma_pagamento = 'Dinheiro' AND troco_para > total))
+);
+CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
+
+CREATE TABLE IF NOT EXISTS pedido_itens (
+  id BIGSERIAL PRIMARY KEY,
+  pedido_id BIGINT NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+  produto_id INTEGER REFERENCES produtos(id) ON DELETE SET NULL,
+  produto_nome VARCHAR(120) NOT NULL,
+  cor VARCHAR(60) NOT NULL,
+  tamanho VARCHAR(30) NOT NULL,
+  quantidade INTEGER NOT NULL CHECK (quantidade > 0),
+  preco_unitario NUMERIC(10,2) NOT NULL CHECK (preco_unitario >= 0),
+  subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0)
+);
+CREATE INDEX IF NOT EXISTS idx_pedido_itens_pedido ON pedido_itens(pedido_id);

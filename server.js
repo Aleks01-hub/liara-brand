@@ -198,6 +198,7 @@ const ordersTableReady = couponTableReady.then(() => db.query(`
     CHECK ((precisa_troco = FALSE AND troco_para IS NULL) OR (precisa_troco = TRUE AND forma_pagamento = 'Dinheiro' AND troco_para > total))
   );
   CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em DESC);
+  ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estoque_reservado BOOLEAN NOT NULL DEFAULT FALSE;
   CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
   CREATE TABLE IF NOT EXISTS pedido_itens (
     id BIGSERIAL PRIMARY KEY,
@@ -224,6 +225,7 @@ function valorMonetario(v) {
 // Cria pedido pendente usando preço e disponibilidade consultados no banco, nunca os valores enviados pelo navegador.
 app.post("/api/pedidos", ah(async (req, res) => {
   await ordersTableReady;
+  await stockTablesReady;
   const body = req.body || {};
   const nome = String(body.nome || "").trim();
   const endereco = String(body.endereco || "").trim();
@@ -256,7 +258,7 @@ app.post("/api/pedidos", ah(async (req, res) => {
   try {
     await client.query("BEGIN");
     const ids = [...new Set(normalizados.map((i) => i.id))];
-    const encontrados = await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque FROM produtos WHERE id = ANY($1::int[]) FOR SHARE", [ids]);
+    const encontrados = await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque FROM produtos WHERE id = ANY($1::int[]) FOR UPDATE", [ids]);
     const produtos = new Map(encontrados.rows.map((p) => [Number(p.id), p]));
     let subtotal = 0;
     const linhas = [];
@@ -268,7 +270,8 @@ app.post("/api/pedidos", ah(async (req, res) => {
       }
       const variantes = Array.isArray(p.variantes) && p.variantes.length ? p.variantes : [{ cor: "Único" }];
       const tamanhos = Array.isArray(p.tamanhos) && p.tamanhos.length ? p.tamanhos : ["Único"];
-      if (!variantes.some((v) => String(v.cor || "").trim().toLowerCase() === item.cor.toLowerCase()) || !tamanhos.includes(item.tamanho)) {
+      const corCanonica = variantes.map((v) => String(v.cor || "Único").trim()).find((v) => v.toLowerCase() === item.cor.toLowerCase());
+      if (!corCanonica || !tamanhos.includes(item.tamanho)) {
         await client.query("ROLLBACK");
         return res.status(409).json({ erro: "A cor ou o tamanho de um produto mudou. Atualize a página e tente novamente." });
       }
@@ -276,16 +279,34 @@ app.post("/api/pedidos", ah(async (req, res) => {
       if (preco === null) throw new Error("Preço inválido cadastrado no produto " + p.id);
       const linhaSubtotal = Math.round(preco * item.quantidade * 100) / 100;
       subtotal += linhaSubtotal;
-      linhas.push({ ...item, nome: p.nome, preco, subtotal: linhaSubtotal });
+      linhas.push({ ...item, cor: corCanonica, nome: p.nome, preco, subtotal: linhaSubtotal });
     }
     subtotal = Math.round(subtotal * 100) / 100;
     if (precisaTroco && trocoPara <= subtotal) {
       await client.query("ROLLBACK");
       return res.status(400).json({ erro: "O valor informado para troco precisa ser maior que o total." });
     }
+
+    // Reserva cada combinação de cor e tamanho na mesma transação do pedido.
     const codigo = "LB-" + Date.now().toString(36).toUpperCase() + "-" + require("crypto").randomBytes(3).toString("hex").toUpperCase();
+    for (const item of linhas) {
+      const baixa = await client.query(
+        "UPDATE estoque_variantes SET quantidade=quantidade-$4,atualizado_em=now() WHERE produto_id=$1 AND lower(cor)=lower($2) AND tamanho=$3 AND quantidade >= $4 RETURNING quantidade,cor",
+        [item.id,item.cor,item.tamanho,item.quantidade]
+      );
+      if (!baixa.rows[0]) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ erro: "Estoque insuficiente para "+item.nome+" ("+item.cor+" / "+item.tamanho+"). Atualize a sacola." });
+      }
+      const nova = Number(baixa.rows[0].quantidade);
+      await client.query(
+        "INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao) VALUES($1,$2,$3,$4,'saida',$5,$6,$7,$8)",
+        [item.id,item.nome,item.cor,item.tamanho,item.quantidade,nova+item.quantidade,nova,"Reserva do pedido "+codigo]
+      );
+    }
+
     const pedido = await client.query(
-      "INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,total) VALUES($1,$2,$3,$4,$5,$6,$7,$7) RETURNING id,codigo,status,subtotal,total,criado_em",
+      "INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,total,estoque_reservado) VALUES($1,$2,$3,$4,$5,$6,$7,$7,TRUE) RETURNING id,codigo,status,subtotal,total,criado_em",
       [codigo,nome,endereco,pagamento,precisaTroco,trocoPara,subtotal]
     );
     for (const item of linhas) {
@@ -326,14 +347,48 @@ app.get("/api/admin/pedidos", auth, ah(async (_req, res) => {
 // O pedido só pode sair de pendente uma vez; confirmado/cancelado são estados finais nesta primeira versão.
 app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
   await ordersTableReady;
+  await stockTablesReady;
   const status = String(req.body?.status || "");
-  if (!["confirmado", "cancelado"].includes(status)) return res.status(400).json({ erro: "Status inválido." });
-  const result = await db.query(
-    "UPDATE pedidos SET status=$1,atualizado_em=now(),confirmado_em=CASE WHEN $1='confirmado' THEN now() ELSE confirmado_em END,cancelado_em=CASE WHEN $1='cancelado' THEN now() ELSE cancelado_em END WHERE id=$2 AND status='pendente' RETURNING *",
-    [status, Number(req.params.id)]
-  );
-  if (!result.rows[0]) return res.status(409).json({ erro: "Pedido não encontrado ou já finalizado." });
-  res.json(result.rows[0]);
+  const id = Number(req.params.id);
+  if (!["confirmado", "cancelado"].includes(status) || !Number.isSafeInteger(id) || id < 1) {
+    return res.status(400).json({ erro: "Status ou pedido inválido." });
+  }
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const found = await client.query("SELECT * FROM pedidos WHERE id=$1 FOR UPDATE", [id]);
+    const pedido = found.rows[0];
+    if (!pedido || pedido.status !== "pendente") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ erro: "Pedido não encontrado ou já finalizado." });
+    }
+    if (status === "cancelado" && pedido.estoque_reservado) {
+      const itens = await client.query("SELECT produto_id,produto_nome,cor,tamanho,quantidade FROM pedido_itens WHERE pedido_id=$1", [id]);
+      for (const item of itens.rows) {
+        if (!item.produto_id) continue;
+        const atual = await client.query(
+          "INSERT INTO estoque_variantes(produto_id,cor,tamanho,quantidade,atualizado_em) VALUES($1,$2,$3,$4,now()) ON CONFLICT(produto_id,cor,tamanho) DO UPDATE SET quantidade=estoque_variantes.quantidade+EXCLUDED.quantidade,atualizado_em=now() RETURNING quantidade",
+          [item.produto_id,item.cor,item.tamanho,item.quantidade]
+        );
+        const nova = Number(atual.rows[0].quantidade);
+        await client.query(
+          "INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao) VALUES($1,$2,$3,$4,'entrada',$5,$6,$7,$8)",
+          [item.produto_id,item.produto_nome,item.cor,item.tamanho,item.quantidade,nova-item.quantidade,nova,"Liberação de reserva do pedido "+pedido.codigo]
+        );
+      }
+    }
+    const result = await client.query(
+      "UPDATE pedidos SET status=$1,estoque_reservado=FALSE,atualizado_em=now(),confirmado_em=CASE WHEN $1='confirmado' THEN now() ELSE confirmado_em END,cancelado_em=CASE WHEN $1='cancelado' THEN now() ELSE cancelado_em END WHERE id=$2 RETURNING *",
+      [status,id]
+    );
+    await client.query("COMMIT");
+    res.json(result.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }));
 
 
@@ -459,7 +514,20 @@ app.get("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
 
 // Catálogo público
 app.get("/api/produtos", ah(async (_req, res) => {
-  const result = await db.query("SELECT * FROM produtos ORDER BY id");
+  await stockTablesReady;
+  const result = await db.query(`
+    SELECT p.*,
+      COALESCE(s.variantes, '[]'::json) AS estoque_variantes
+    FROM produtos p
+    LEFT JOIN LATERAL (
+      SELECT json_agg(json_build_object(
+        'cor', e.cor, 'tamanho', e.tamanho, 'quantidade', e.quantidade
+      )) AS variantes
+      FROM estoque_variantes e
+      WHERE e.produto_id = p.id
+    ) s ON TRUE
+    ORDER BY p.id
+  `);
   res.set("Cache-Control", "no-store");
   res.json(result.rows);
 }));

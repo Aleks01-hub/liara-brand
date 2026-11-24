@@ -63,10 +63,12 @@ CREATE TABLE IF NOT EXISTS pedidos (
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
   confirmado_em TIMESTAMPTZ,
   cancelado_em TIMESTAMPTZ,
+  estoque_reservado BOOLEAN NOT NULL DEFAULT FALSE,
   CHECK ((precisa_troco = FALSE AND troco_para IS NULL) OR (precisa_troco = TRUE AND forma_pagamento = 'Dinheiro' AND troco_para > total))
 );
 CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em DESC);
 CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estoque_reservado BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS pedido_itens (
   id BIGSERIAL PRIMARY KEY,

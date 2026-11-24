@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Pedidos · LIARA BRAND</title>
+<style>
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#fff;--soft:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--ai:#fffaf0;--ok:#2f8f6b;--bad:#b3392f}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--soft:#34476a;--line:#3a4d6b;--acc:#fffaf0;--ai:#1f2f46;--ok:#4cb48b;--bad:#e5766c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 16px}.bar b{font:700 20px Georgia,serif;letter-spacing:.04em}.bar nav{margin-left:auto;display:flex;gap:12px;align-items:center}.bar a{color:var(--acc);font-weight:700;text-decoration:none}
+main{max-width:1050px;margin:auto;padding:18px 16px 50px}.intro h1{margin:0 0 4px;font-size:26px}.muted{color:var(--mute);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.stats div,.order{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px}.stats b{display:block;font-size:24px}.stats span{font-size:12px;color:var(--mute)}
+.toolbar{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}.toolbar input{flex:1;min-width:180px}.toolbar select{min-width:145px}
+input,select{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.btn{border:0;border-radius:10px;padding:9px 13px;font-weight:700;background:var(--acc);color:var(--ai)}.btn.alt{background:none;color:var(--acc);border:1.5px solid var(--acc)}.btn.danger{background:none;color:var(--bad);border:1.5px solid var(--bad)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.order{margin:10px 0}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.top h2{margin:0;font-size:18px}.status{display:inline-block;padding:3px 9px;border-radius:99px;background:var(--soft);font-size:12px;font-weight:700}.status.pendente{color:#a66a00}.status.confirmado{color:var(--ok)}.status.cancelado{color:var(--bad)}
+.details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.items{background:var(--soft);border-radius:10px;padding:10px;margin:8px 0}.items p{margin:4px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;z-index:30;max-width:92vw}#toast.on{opacity:1}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}.details{grid-template-columns:1fr}.toolbar>*{flex:1}}
+</style></head><body>
+<header class="bar"><b>LIARA <span style="font-weight:400">Pedidos</span></b><nav><a href="/admin">Painel</a><a href="/admin/cupons">Cupons</a><button class="btn alt" id="logout">Sair</button></nav></header>
+<main><section class="intro"><h1>Pedidos da loja</h1><div class="muted">Pedidos feitos pelo catálogo e, futuramente, pelo PDV. Confirme a venda somente depois de validar o pagamento.</div></section>
+<div class="stats" id="stats"></div>
+<div class="toolbar"><input id="search" type="search" placeholder="Buscar código ou cliente"><select id="filter"><option value="">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><button class="btn alt" id="refresh">Atualizar</button></div>
+<div id="list"><p class="muted">Carregando pedidos...</p></div></main><div id="toast" role="status"></div>
+<script>
+var token=localStorage.getItem("tk"),orders=[], $=function(id){return document.getElementById(id)};
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function money(v){return "R$ "+Number(v||0).toFixed(2).replace(".",",")}
+function date(v){return v?new Date(v).toLocaleString("pt-BR"):"—"}
+function toast(t){$("toast").textContent=t;$("toast").className="on";clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").className=""},2800)}
+function api(url,method,data){return fetch(url,{method:method||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:data?JSON.stringify(data):undefined}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.erro||"Não foi possível concluir.");return d})}).catch(function(e){if(e.message==="Não autorizado"){localStorage.removeItem("tk");location.href="/admin";return}throw e})}
+function render(){
+ var counts={pendente:0,confirmado:0,cancelado:0};orders.forEach(function(o){counts[o.status]=(counts[o.status]||0)+1});
+ $("stats").innerHTML=[["Total",orders.length],["Pendentes",counts.pendente],["Confirmados",counts.confirmado],["Cancelados",counts.cancelado]].map(function(x){return "<div><b>"+x[1]+"</b><span>"+x[0]+"</span></div>"}).join("");
+ var q=$("search").value.trim().toLowerCase(),f=$("filter").value;
+ var rows=orders.filter(function(o){return (!f||o.status===f)&&(!q||(o.codigo+" "+o.cliente_nome).toLowerCase().indexOf(q)>=0)});
+ $("list").innerHTML=rows.map(function(o){
+  var itens=(o.itens||[]).map(function(i){return "<p><b>"+Number(i.quantidade)+"x "+esc(i.nome)+"</b> · "+esc(i.cor)+" · Tam. "+esc(i.tamanho)+" — "+money(i.subtotal)+"</p>"}).join("");
+  var troco=o.precisa_troco?" · Troco para "+money(o.troco_para):"";
+  return '<article class="order" data-id="'+o.id+'"><div class="top"><div><h2>'+esc(o.codigo)+' <span class="status '+o.status+'">'+o.status.toUpperCase()+'</span></h2><div class="muted">'+date(o.criado_em)+' · '+esc(o.origem)+'</div></div><b>'+money(o.total)+'</b></div><div class="details"><div><b>Cliente:</b> '+esc(o.cliente_nome)+'<br><b>Endereço:</b> '+esc(o.endereco_entrega)+'</div><div><b>Pagamento:</b> '+esc(o.forma_pagamento)+troco+'<br><b>Subtotal:</b> '+money(o.subtotal)+' · <b>Desconto:</b> '+money(o.desconto)+'</div></div><div class="items">'+(itens||"<p>Itens indisponíveis.</p>")+'</div>'+(o.status==="pendente"?'<div class="actions"><button class="btn" data-status="confirmado">Confirmar venda</button><button class="btn danger" data-status="cancelado">Cancelar pedido</button></div>':'')+'</article>';
+ }).join("")||'<p class="muted" style="text-align:center;padding:30px">Nenhum pedido encontrado.</p>';
+}
+function load(){ $("list").innerHTML='<p class="muted">Carregando pedidos...</p>';api("/api/admin/pedidos").then(function(d){orders=d;render()}).catch(function(e){$("list").textContent=e.message;toast(e.message)})}
+$("search").oninput=render;$("filter").onchange=render;$("refresh").onclick=load;$("logout").onclick=function(){localStorage.removeItem("tk");location.href="/admin"};
+$("list").addEventListener("click",function(e){var b=e.target.closest("[data-status]");if(!b)return;var card=b.closest("[data-id]"),id=card.dataset.id,status=b.dataset.status;var label=status==="confirmado"?"confirmar esta venda":"cancelar este pedido";if(!confirm("Tem certeza de que deseja "+label+"?"))return;b.disabled=true;api("/api/admin/pedidos/"+id+"/status","PATCH",{status:status}).then(function(){toast("Pedido atualizado.");load()}).catch(function(e){toast(e.message);b.disabled=false})});
+if(!token)location.href="/admin";else load();
+</script></body></html>

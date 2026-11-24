@@ -1,12 +1,28 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Estoque · LIARA BRAND</title>
 <style>
-:root{--bg:#fffaf0;--ink:#1f2f46;--muted:#647188;--card:#fff;--soft:#f3ecdD;--line:#e5dbc7;--accent:#1f2f46;--on:#fffaf0;--ok:#26805f;--bad:#b33b32}
-@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--muted:#bac5d5;--card:#2a3c57;--soft:#34476a;--line:#41536f;--accent:#fffaf0;--on:#1f2f46;--ok:#5dc49a;--bad:#ef8176}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}button,input,select{font:inherit;color:inherit}button{cursor:pointer}.bar{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}.bar b{font:700 20px Georgia,serif}.bar nav{margin-left:auto;display:flex;gap:13px;align-items:center;flex-wrap:wrap}.bar a{color:var(--accent);font-weight:700;text-decoration:none}main{max-width:1100px;margin:auto;padding:20px 16px 50px}h1{font-size:27px;margin:0}.muted{color:var(--muted);font-size:13px}.panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px;margin:18px 0}.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg)}.wide{grid-column:1/-1}.btn{border:0;border-radius:9px;padding:10px 14px;background:var(--accent);color:var(--on);font-weight:700}.btn.alt{background:transparent;border:1px solid var(--accent);color:var(--accent)}.btn:disabled{opacity:.5}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--muted)}.qty{font-weight:800;font-size:16px}.low{color:var(--bad)}.tag{font-size:11px;padding:3px 7px;border-radius:99px;background:var(--soft)}#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:30px;opacity:0;z-index:5}#toast.on{opacity:1}
-@media(max-width:600px){.form{grid-template-columns:1fr}.wide{grid-column:auto}.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%}}
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#fff;--soft:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--ai:#fffaf0;--ok:#2f8f6b;--bad:#b3392f}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--soft:#34476a;--line:#3a4d6b;--acc:#fffaf0;--ai:#1f2f46;--ok:#4cb48b;--bad:#e5766c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0))}
+.bar b{font-family:Georgia,serif;font-size:20px;letter-spacing:.04em}.bar b span{color:var(--acc);font-weight:400}
+.bar nav{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bar a{color:var(--acc);font-weight:700;text-decoration:none}
+main{max-width:980px;margin:auto;padding:16px}h1{font-size:26px;margin:0 0 4px}.muted{color:var(--mute);font-size:13px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.panel h2{font-size:18px;margin:0 0 12px}
+input,select{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.field label{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wide{grid-column:1/-1}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:700;background:var(--acc);color:var(--ai);display:inline-block;text-align:center}.btn.g{background:none;color:var(--acc);border:1.5px solid var(--acc)}.btn.sm{padding:6px 10px;font-size:13px}.btn:disabled{opacity:.6;cursor:not-allowed}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px}
+.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--mute)}
+.qty{font-weight:800;font-size:16px}.low{color:var(--bad)}.tag{font-size:11px;padding:3px 7px;border-radius:99px;background:var(--soft)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:92vw;text-align:center}#toast.on{opacity:1}
+@media(max-width:700px){.form{grid-template-columns:1fr}.wide{grid-column:auto}.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%}}
 </style></head><body>
-<header class="bar"><b>LIARA · Estoque</b><nav><a href="/admin">Painel</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><button class="btn alt" id="logout">Sair</button></nav></header>
+<header class="bar"><b>LIARA <span>Estoque</span></b><nav><a href="/admin">Painel</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn g sm" id="logout">Sair</button></nav></header>
 <main><h1>Controle de estoque</h1><p class="muted">Gerencie quantidades separadas por produto, cor e tamanho. Toda alteração gera um registro no histórico.</p>
 <section class="panel"><h2 style="margin:0 0 12px">Registrar movimentação</h2><form id="form" class="form">
 <div class="field wide"><label for="product">Produto</label><select id="product" required></select></div>

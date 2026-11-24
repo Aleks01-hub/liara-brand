@@ -332,6 +332,127 @@ app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
   res.json(result.rows[0]);
 }));
 
+
+// Estoque detalhado por produto, cor e tamanho. Mantém o campo legado em_estoque para compatibilidade.
+const stockTablesReady = db.query(\`
+  CREATE TABLE IF NOT EXISTS estoque_variantes (
+    id BIGSERIAL PRIMARY KEY,
+    produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+    cor VARCHAR(60) NOT NULL,
+    tamanho VARCHAR(30) NOT NULL,
+    quantidade INTEGER NOT NULL DEFAULT 0 CHECK (quantidade >= 0),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (produto_id, cor, tamanho)
+  );
+  CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+    id BIGSERIAL PRIMARY KEY,
+    produto_id INTEGER REFERENCES produtos(id) ON DELETE SET NULL,
+    produto_nome VARCHAR(120) NOT NULL,
+    cor VARCHAR(60) NOT NULL,
+    tamanho VARCHAR(30) NOT NULL,
+    tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('entrada','saida','ajuste')),
+    quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
+    quantidade_anterior INTEGER NOT NULL CHECK (quantidade_anterior >= 0),
+    quantidade_nova INTEGER NOT NULL CHECK (quantidade_nova >= 0),
+    observacao VARCHAR(240),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS idx_estoque_produto ON estoque_variantes(produto_id);
+  CREATE INDEX IF NOT EXISTS idx_mov_estoque_criado ON movimentacoes_estoque(criado_em DESC);
+\`).then(() => true).catch((error) => {
+  console.error("Não foi possível preparar as tabelas de estoque:", error.message);
+  throw error;
+});
+
+// Consulta todas as combinações cadastradas e sua quantidade atual.
+app.get("/api/admin/estoque", auth, ah(async (_req, res) => {
+  await stockTablesReady;
+  const result = await db.query(\`
+    SELECT p.id AS produto_id, p.nome AS produto_nome, p.preco,
+      COALESCE(v.cor, 'Único') AS cor,
+      COALESCE(t.tamanho, 'Único') AS tamanho,
+      COALESCE(e.quantidade, 0) AS quantidade,
+      e.atualizado_em
+    FROM produtos p
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(NULLIF(btrim(x->>'cor'), ''), 'Único') AS cor
+      FROM jsonb_array_elements(
+        CASE WHEN jsonb_typeof(p.variantes)='array' AND jsonb_array_length(p.variantes)>0
+          THEN p.variantes ELSE '[{"cor":"Único"}]'::jsonb END
+      ) x
+    ) v
+    CROSS JOIN LATERAL (
+      SELECT unnest(CASE WHEN cardinality(p.tamanhos)>0 THEN p.tamanhos ELSE ARRAY['Único']::text[] END) AS tamanho
+    ) t
+    LEFT JOIN estoque_variantes e
+      ON e.produto_id=p.id AND lower(e.cor)=lower(v.cor) AND e.tamanho=t.tamanho
+    ORDER BY p.nome, v.cor, t.tamanho
+  \`);
+  res.json(result.rows);
+}));
+
+// Registra entrada, saída ou ajuste absoluto e grava o histórico na mesma transação.
+app.post("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
+  await stockTablesReady;
+  const produtoId = Number(req.body?.produto_id);
+  const cor = String(req.body?.cor || "").trim();
+  const tamanho = String(req.body?.tamanho || "").trim();
+  const tipo = String(req.body?.tipo || "");
+  const quantidade = Number(req.body?.quantidade);
+  const observacao = String(req.body?.observacao || "").trim().slice(0, 240);
+  if (!Number.isSafeInteger(produtoId) || produtoId < 1 || !cor || cor.length > 60 || !tamanho || tamanho.length > 30 ||
+      !["entrada","saida","ajuste"].includes(tipo) || !Number.isInteger(quantidade) || quantidade < 0 || quantidade > 100000) {
+    return res.status(400).json({ erro: "Confira produto, cor, tamanho, tipo e quantidade." });
+  }
+  if (tipo !== "ajuste" && quantidade < 1) return res.status(400).json({ erro: "Entrada e saída precisam ser maiores que zero." });
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const pr = await client.query("SELECT id,nome,variantes,tamanhos FROM produtos WHERE id=$1 FOR UPDATE", [produtoId]);
+    const p = pr.rows[0];
+    if (!p) { await client.query("ROLLBACK"); return res.status(404).json({ erro: "Produto não encontrado." }); }
+    const variantes = Array.isArray(p.variantes) && p.variantes.length ? p.variantes : [{cor:"Único"}];
+    const tamanhos = Array.isArray(p.tamanhos) && p.tamanhos.length ? p.tamanhos : ["Único"];
+    if (!variantes.some(v => String(v.cor || "Único").trim().toLowerCase() === cor.toLowerCase()) ||
+        !tamanhos.includes(tamanho)) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ erro: "A cor ou o tamanho não pertence a esse produto." });
+    }
+    const existing = await client.query(
+      "SELECT quantidade FROM estoque_variantes WHERE produto_id=$1 AND lower(cor)=lower($2) AND tamanho=$3 FOR UPDATE",
+      [produtoId,cor,tamanho]
+    );
+    const anterior = existing.rows[0] ? Number(existing.rows[0].quantidade) : 0;
+    const nova = tipo === "entrada" ? anterior + quantidade : tipo === "saida" ? anterior - quantidade : quantidade;
+    if (nova < 0) { await client.query("ROLLBACK"); return res.status(409).json({ erro: "Estoque insuficiente para essa saída." }); }
+    await client.query(\`
+      INSERT INTO estoque_variantes(produto_id,cor,tamanho,quantidade,atualizado_em)
+      VALUES($1,$2,$3,$4,now())
+      ON CONFLICT(produto_id,cor,tamanho)
+      DO UPDATE SET quantidade=EXCLUDED.quantidade,atualizado_em=now()
+    \`, [produtoId,cor,tamanho,nova]);
+    const mov = await client.query(\`
+      INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
+    \`, [produtoId,p.nome,cor,tamanho,tipo,quantidade,anterior,nova,observacao || null]);
+    await client.query("COMMIT");
+    res.status(201).json(mov.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}));
+
+app.get("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
+  await stockTablesReady;
+  const result = await db.query(
+    "SELECT * FROM movimentacoes_estoque ORDER BY criado_em DESC,id DESC LIMIT 300"
+  );
+  res.json(result.rows);
+}));
+
 // Catálogo público
 app.get("/api/produtos", ah(async (_req, res) => {
   const result = await db.query("SELECT * FROM produtos ORDER BY id");

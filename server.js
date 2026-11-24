@@ -37,7 +37,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const ah = (fn) => (req, res) =>
   Promise.resolve(fn(req, res)).catch((e) => {
     console.error(e);
-    res.status(500).json({ erro: "Erro interno" });
+    res.status(e.code === "23505" ? 409 : 500).json({ erro: e.code === "23505" ? "Já existe um cupom com esse código." : "Erro interno" });
   });
 
 function auth(req, res, next) {

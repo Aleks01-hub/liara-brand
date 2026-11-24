@@ -105,14 +105,14 @@ const couponTableReady = db.query(`
   .catch((error) => { console.error("Não foi possível preparar a tabela cupons:", error.message); throw error; });
 
 function normalizarCupom(body) {
-  const codigo = String(body.codigo || "").trim().toUpperCase().replace(/\\s+/g, "");
+  const codigo = String(body.codigo || "").trim().toUpperCase().replace(/\s+/g, "");
   const tipo = body.tipo_desconto === "fixo" ? "fixo" : body.tipo_desconto === "percentual" ? "percentual" : "";
   const valor = Number(body.valor_desconto);
   const minimo = body.valor_minimo === "" || body.valor_minimo == null ? 0 : Number(body.valor_minimo);
   const limite = body.limite_usos === "" || body.limite_usos == null ? null : Number(body.limite_usos);
   const inicio = body.data_inicio || null;
   const fim = body.data_fim || null;
-  const dataValida = (v) => !v || (typeof v === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")));
+  const dataValida = (v) => !v || (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")));
   if (!/^[A-Z0-9_-]{3,40}$/.test(codigo)) return { erro: "Use um código de 3 a 40 caracteres: letras, números, hífen ou underline." };
   if (!tipo || !Number.isFinite(valor) || valor <= 0 || (tipo === "percentual" && valor > 100)) return { erro: "Informe um desconto válido." };
   if (!Number.isFinite(minimo) || minimo < 0) return { erro: "O valor mínimo do pedido é inválido." };

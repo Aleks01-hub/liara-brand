@@ -24,6 +24,10 @@ app.get("/health", async (_req, res) => {
 });
 
 // Painel administrativo: o arquivo fica fora da pasta pública.
+app.get(["/admin/cupons", "/admin/cupons/"], (_req, res) => {
+  res.set("X-Robots-Tag", "noindex");
+  res.sendFile(path.join(__dirname, "views", "cupons.html"));
+});
 app.get(["/admin", "/admin/", "/adm"], (_req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.sendFile(path.join(__dirname, "views", "admin.html"));
@@ -79,6 +83,87 @@ app.post("/api/login", (req, res) => {
     token: jwt.sign({ admin: true }, process.env.JWT_SECRET, { expiresIn: "12h" }),
   });
 });
+
+const couponTableReady = db.query(`
+  CREATE TABLE IF NOT EXISTS cupons (
+    id BIGSERIAL PRIMARY KEY,
+    codigo VARCHAR(40) NOT NULL UNIQUE,
+    tipo_desconto VARCHAR(10) NOT NULL CHECK (tipo_desconto IN ('percentual','fixo')),
+    valor_desconto NUMERIC(10,2) NOT NULL CHECK (valor_desconto > 0),
+    valor_minimo NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (valor_minimo >= 0),
+    data_inicio DATE,
+    data_fim DATE,
+    limite_usos INTEGER CHECK (limite_usos IS NULL OR limite_usos > 0),
+    usos INTEGER NOT NULL DEFAULT 0 CHECK (usos >= 0),
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (data_inicio IS NULL OR data_fim IS NULL OR data_fim >= data_inicio),
+    CHECK (tipo_desconto <> 'percentual' OR valor_desconto <= 100)
+  )
+`).then(() => db.query("CREATE INDEX IF NOT EXISTS idx_cupons_ativo_validade ON cupons (ativo, data_inicio, data_fim)"))
+  .catch((error) => { console.error("Não foi possível preparar a tabela cupons:", error.message); throw error; });
+
+function normalizarCupom(body) {
+  const codigo = String(body.codigo || "").trim().toUpperCase().replace(/\\s+/g, "");
+  const tipo = body.tipo_desconto === "fixo" ? "fixo" : body.tipo_desconto === "percentual" ? "percentual" : "";
+  const valor = Number(body.valor_desconto);
+  const minimo = body.valor_minimo === "" || body.valor_minimo == null ? 0 : Number(body.valor_minimo);
+  const limite = body.limite_usos === "" || body.limite_usos == null ? null : Number(body.limite_usos);
+  const inicio = body.data_inicio || null;
+  const fim = body.data_fim || null;
+  const dataValida = (v) => !v || (typeof v === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")));
+  if (!/^[A-Z0-9_-]{3,40}$/.test(codigo)) return { erro: "Use um código de 3 a 40 caracteres: letras, números, hífen ou underline." };
+  if (!tipo || !Number.isFinite(valor) || valor <= 0 || (tipo === "percentual" && valor > 100)) return { erro: "Informe um desconto válido." };
+  if (!Number.isFinite(minimo) || minimo < 0) return { erro: "O valor mínimo do pedido é inválido." };
+  if (limite !== null && (!Number.isInteger(limite) || limite < 1)) return { erro: "O limite de usos deve ser um número inteiro positivo." };
+  if (!dataValida(inicio) || !dataValida(fim) || (inicio && fim && fim < inicio)) return { erro: "Confira as datas de validade do cupom." };
+  return { valores: [codigo, tipo, valor, minimo, inicio, fim, limite, body.ativo !== false] };
+}
+
+// Gerenciamento administrativo de cupons. A validação pública será ativada junto ao checkout.
+app.get("/api/admin/cupons", auth, ah(async (_req, res) => {
+  await couponTableReady;
+  const result = await db.query("SELECT * FROM cupons ORDER BY criado_em DESC, id DESC");
+  res.json(result.rows);
+}));
+
+app.post("/api/admin/cupons", auth, ah(async (req, res) => {
+  await couponTableReady;
+  const v = normalizarCupom(req.body || {});
+  if (v.erro) return res.status(400).json({ erro: v.erro });
+  const result = await db.query(
+    "INSERT INTO cupons(codigo,tipo_desconto,valor_desconto,valor_minimo,data_inicio,data_fim,limite_usos,ativo) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+    v.valores
+  );
+  res.status(201).json(result.rows[0]);
+}));
+
+app.put("/api/admin/cupons/:id", auth, ah(async (req, res) => {
+  await couponTableReady;
+  const v = normalizarCupom(req.body || {});
+  if (v.erro) return res.status(400).json({ erro: v.erro });
+  const result = await db.query(
+    "UPDATE cupons SET codigo=$1,tipo_desconto=$2,valor_desconto=$3,valor_minimo=$4,data_inicio=$5,data_fim=$6,limite_usos=$7,ativo=$8,atualizado_em=now() WHERE id=$9 RETURNING *",
+    [...v.valores, Number(req.params.id)]
+  );
+  if (!result.rows[0]) return res.status(404).json({ erro: "Cupom não encontrado." });
+  res.json(result.rows[0]);
+}));
+
+app.patch("/api/admin/cupons/:id/status", auth, ah(async (req, res) => {
+  await couponTableReady;
+  const result = await db.query("UPDATE cupons SET ativo=$1,atualizado_em=now() WHERE id=$2 RETURNING *", [req.body?.ativo === true, Number(req.params.id)]);
+  if (!result.rows[0]) return res.status(404).json({ erro: "Cupom não encontrado." });
+  res.json(result.rows[0]);
+}));
+
+app.delete("/api/admin/cupons/:id", auth, ah(async (req, res) => {
+  await couponTableReady;
+  const result = await db.query("DELETE FROM cupons WHERE id=$1", [Number(req.params.id)]);
+  if (!result.rowCount) return res.status(404).json({ erro: "Cupom não encontrado." });
+  res.json({ ok: true });
+}));
 
 // Catálogo público
 app.get("/api/produtos", ah(async (_req, res) => {

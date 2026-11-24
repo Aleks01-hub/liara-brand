@@ -338,7 +338,7 @@ app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
 
 
 // Estoque detalhado por produto, cor e tamanho. Mantém o campo legado em_estoque para compatibilidade.
-const stockTablesReady = db.query(\`
+const stockTablesReady = db.query(`
   CREATE TABLE IF NOT EXISTS estoque_variantes (
     id BIGSERIAL PRIMARY KEY,
     produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
@@ -363,7 +363,7 @@ const stockTablesReady = db.query(\`
   );
   CREATE INDEX IF NOT EXISTS idx_estoque_produto ON estoque_variantes(produto_id);
   CREATE INDEX IF NOT EXISTS idx_mov_estoque_criado ON movimentacoes_estoque(criado_em DESC);
-\`).then(() => true).catch((error) => {
+`).then(() => true).catch((error) => {
   console.error("Não foi possível preparar as tabelas de estoque:", error.message);
   throw error;
 });
@@ -371,7 +371,7 @@ const stockTablesReady = db.query(\`
 // Consulta todas as combinações cadastradas e sua quantidade atual.
 app.get("/api/admin/estoque", auth, ah(async (_req, res) => {
   await stockTablesReady;
-  const result = await db.query(\`
+  const result = await db.query(`
     SELECT p.id AS produto_id, p.nome AS produto_nome, p.preco,
       COALESCE(v.cor, 'Único') AS cor,
       COALESCE(t.tamanho, 'Único') AS tamanho,
@@ -391,7 +391,7 @@ app.get("/api/admin/estoque", auth, ah(async (_req, res) => {
     LEFT JOIN estoque_variantes e
       ON e.produto_id=p.id AND lower(e.cor)=lower(v.cor) AND e.tamanho=t.tamanho
     ORDER BY p.nome, v.cor, t.tamanho
-  \`);
+  `);
   res.json(result.rows);
 }));
 
@@ -429,16 +429,16 @@ app.post("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
     const anterior = existing.rows[0] ? Number(existing.rows[0].quantidade) : 0;
     const nova = tipo === "entrada" ? anterior + quantidade : tipo === "saida" ? anterior - quantidade : quantidade;
     if (nova < 0) { await client.query("ROLLBACK"); return res.status(409).json({ erro: "Estoque insuficiente para essa saída." }); }
-    await client.query(\`
+    await client.query(`
       INSERT INTO estoque_variantes(produto_id,cor,tamanho,quantidade,atualizado_em)
       VALUES($1,$2,$3,$4,now())
       ON CONFLICT(produto_id,cor,tamanho)
       DO UPDATE SET quantidade=EXCLUDED.quantidade,atualizado_em=now()
-    \`, [produtoId,cor,tamanho,nova]);
-    const mov = await client.query(\`
+    `, [produtoId,cor,tamanho,nova]);
+    const mov = await client.query(`
       INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
-    \`, [produtoId,p.nome,cor,tamanho,tipo,quantidade,anterior,nova,observacao || null]);
+    `, [produtoId,p.nome,cor,tamanho,tipo,quantidade,anterior,nova,observacao || null]);
     await client.query("COMMIT");
     res.status(201).json(mov.rows[0]);
   } catch (error) {

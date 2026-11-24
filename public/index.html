@@ -254,17 +254,38 @@ function checkout(){
   if(!cart.length){toast("Sua sacola está vazia");return}
   var bad=null;["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
   if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
-  var tot=0,m="Olá! Gostaria de fazer o seguinte pedido:\n\n";
-  cart.forEach(function(i){tot+=i.p*i.q;m+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+" ("+brl(i.p*i.q)+")\n"});
+  var pagamento=document.getElementById("cp").value;
   var precisaTroco=document.getElementById("ctn").value,valorTroco=Number(document.getElementById("ct").value);
-  if(document.getElementById("cp").value==="Dinheiro"){
-    if(!precisaTroco){var campo=document.getElementById("ctn");campo.focus();toast("Informe se precisa de troco");return}
-    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=tot)){var campo=document.getElementById("ct");campo.classList.add("bad");campo.focus();toast("Informe um valor para troco maior que o total do pedido");return}
+  var estimado=cart.reduce(function(n,i){return n+i.p*i.q},0);
+  if(pagamento==="Dinheiro"){
+    if(!precisaTroco){document.getElementById("ctn").focus();toast("Informe se precisa de troco");return}
+    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=estimado)){document.getElementById("ct").classList.add("bad");document.getElementById("ct").focus();toast("Informe um valor para troco maior que o total do pedido");return}
   }
-  m+="\nTotal: "+brl(tot)+"\n\nNome: "+document.getElementById("cn").value.trim()+"\nEndereço: "+document.getElementById("ca").value.trim()+"\nPagamento: "+document.getElementById("cp").value;
-  if(document.getElementById("cp").value==="Dinheiro"){m+="\nPrecisa de troco: "+precisaTroco;if(precisaTroco==="Sim")m+="\nTroco para: "+brl(valorTroco)}
-  var a=document.createElement("a");a.href="https://wa.me/"+WA+"?text="+encodeURIComponent(m);a.target="_blank";a.rel="noopener";
-  document.body.appendChild(a);a.click();a.remove();toast("Abrindo o WhatsApp da loja");
+  var botao=document.getElementById("checkout");
+  if(botao.disabled)return;
+  var janela=window.open("about:blank","_blank");
+  botao.disabled=true;botao.textContent="Registrando pedido...";
+  fetch("/api/pedidos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    nome:document.getElementById("cn").value.trim(),
+    endereco:document.getElementById("ca").value.trim(),
+    pagamento:pagamento,
+    precisa_troco:pagamento==="Dinheiro"&&precisaTroco==="Sim",
+    troco_para:pagamento==="Dinheiro"&&precisaTroco==="Sim"?valorTroco:null,
+    itens:cart.map(function(i){return{id:i.id,c:i.c,z:i.z,q:i.q}})
+  })}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.erro||"Não foi possível registrar o pedido.");return d})})
+  .then(function(pedido){
+    var mensagem="Olá! Fiz um pedido pelo catálogo da LIARA BRAND.\\n\\nPedido: "+pedido.codigo+"\\n\\n";
+    cart.forEach(function(i){mensagem+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+"\\n"});
+    mensagem+="\\nTotal confirmado pelo sistema: "+brl(Number(pedido.total))+"\\n\\nNome: "+document.getElementById("cn").value.trim()+"\\nEndereço: "+document.getElementById("ca").value.trim()+"\\nPagamento: "+pagamento;
+    if(pagamento==="Dinheiro"){mensagem+="\\nPrecisa de troco: "+precisaTroco;if(precisaTroco==="Sim")mensagem+="\\nTroco para: "+brl(valorTroco)}
+    var destino="https://wa.me/"+WA+"?text="+encodeURIComponent(mensagem);
+    if(janela&&!janela.closed)janela.location.href=destino;else window.location.href=destino;
+    cart=[];upd();document.getElementById("drawer").classList.remove("open");
+    toast("Pedido "+pedido.codigo+" registrado! Abrindo WhatsApp.");
+  }).catch(function(e){
+    if(janela&&!janela.closed)janela.close();
+    toast(e.message||"Não foi possível registrar o pedido.");
+  }).finally(function(){botao.disabled=false;botao.textContent="Finalizar compra"});
 }
 function upd(){
   salvarSacola();

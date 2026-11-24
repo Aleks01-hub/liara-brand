@@ -24,6 +24,10 @@ app.get("/health", async (_req, res) => {
 });
 
 // Painel administrativo: o arquivo fica fora da pasta pública.
+app.get(["/admin/pdv", "/admin/pdv/"], (_req, res) => {
+  res.set("X-Robots-Tag", "noindex");
+  res.sendFile(path.join(__dirname, "views", "pdv.html"));
+});
 app.get(["/admin/estoque", "/admin/estoque/"], (_req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.sendFile(path.join(__dirname, "views", "estoque.html"));
@@ -323,6 +327,67 @@ app.post("/api/pedidos", ah(async (req, res) => {
   } finally {
     client.release();
   }
+}));
+
+
+// Venda presencial pelo PDV: autenticação obrigatória, preço e estoque sempre conferidos no banco.
+app.post("/api/admin/pdv/venda", auth, ah(async (req, res) => {
+  await ordersTableReady;
+  await stockTablesReady;
+  const body = req.body || {};
+  const nome = String(body.nome || "Cliente balcão").trim().slice(0,120) || "Cliente balcão";
+  const pagamento = String(body.pagamento || "");
+  const itensRecebidos = Array.isArray(body.itens) ? body.itens : [];
+  if (!["Pix","Cartão","Dinheiro"].includes(pagamento)) return res.status(400).json({ erro: "Forma de pagamento inválida." });
+  if (!itensRecebidos.length || itensRecebidos.length > 50) return res.status(400).json({ erro: "Adicione produtos à venda." });
+  const mapa = new Map();
+  for (const item of itensRecebidos) {
+    const id=Number(item.id), quantidade=Number(item.q), cor=String(item.c||"").trim(), tamanho=String(item.z||"").trim();
+    if (!Number.isSafeInteger(id)||id<1||!Number.isInteger(quantidade)||quantidade<1||quantidade>100||!cor||cor.length>60||!tamanho||tamanho.length>30) return res.status(400).json({ erro: "Confira os produtos, variações e quantidades." });
+    const key=[id,cor.toLowerCase(),tamanho.toLowerCase()].join("|");
+    const atual=mapa.get(key);
+    if (atual) atual.quantidade+=quantidade; else mapa.set(key,{id,quantidade,cor,tamanho});
+  }
+  const linhasSolicitadas=[...mapa.values()];
+  if (linhasSolicitadas.some(i=>i.quantidade>100)) return res.status(400).json({ erro: "Quantidade máxima por variação: 100." });
+  const precisaTroco=pagamento==="Dinheiro" && body.precisa_troco===true;
+  const trocoPara=precisaTroco?valorMonetario(body.troco_para):null;
+  if (pagamento!=="Dinheiro" && (body.precisa_troco===true || body.troco_para!=null)) return res.status(400).json({ erro: "Troco só pode ser informado para dinheiro." });
+  if (precisaTroco && trocoPara===null) return res.status(400).json({ erro: "Informe um valor válido para o troco." });
+  const client=await db.connect();
+  try {
+    await client.query("BEGIN");
+    const ids=[...new Set(linhasSolicitadas.map(i=>i.id))].sort((a,b)=>a-b);
+    const encontrados=await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque FROM produtos WHERE id=ANY($1::int[]) ORDER BY id FOR UPDATE",[ids]);
+    const produtos=new Map(encontrados.rows.map(p=>[Number(p.id),p]));
+    const linhas=[]; let total=0;
+    for (const item of linhasSolicitadas) {
+      const p=produtos.get(item.id);
+      if (!p || !p.em_estoque) { await client.query("ROLLBACK"); return res.status(409).json({ erro: "Um produto foi desativado ou não existe mais." }); }
+      const variantes=Array.isArray(p.variantes)&&p.variantes.length?p.variantes:[{cor:"Único"}];
+      const tamanhos=Array.isArray(p.tamanhos)&&p.tamanhos.length?p.tamanhos:["Único"];
+      const cor=variantes.map(v=>String(v.cor||"Único").trim()).find(v=>v.toLowerCase()===item.cor.toLowerCase());
+      if (!cor || !tamanhos.includes(item.tamanho)) { await client.query("ROLLBACK"); return res.status(409).json({ erro: "Uma variação do produto não está mais disponível." }); }
+      const preco=valorMonetario(p.preco);
+      if (preco===null) throw new Error("Preço inválido no produto "+p.id);
+      const subtotal=Math.round(preco*item.quantidade*100)/100;
+      total=Math.round((total+subtotal)*100)/100;
+      linhas.push({...item,cor,nome:p.nome,preco,subtotal});
+    }
+    if (precisaTroco && trocoPara<=total) { await client.query("ROLLBACK"); return res.status(400).json({ erro: "O valor recebido deve ser maior que o total da venda." }); }
+    const codigo="LB-PDV-"+Date.now().toString(36).toUpperCase()+"-"+require("crypto").randomBytes(2).toString("hex").toUpperCase();
+    for (const item of linhas) {
+      const baixa=await client.query("UPDATE estoque_variantes SET quantidade=quantidade-$4,atualizado_em=now() WHERE produto_id=$1 AND lower(cor)=lower($2) AND tamanho=$3 AND quantidade >= $4 RETURNING quantidade",[item.id,item.cor,item.tamanho,item.quantidade]);
+      if (!baixa.rows[0]) { await client.query("ROLLBACK"); return res.status(409).json({ erro: "Estoque insuficiente: "+item.nome+" · "+item.cor+" · "+item.tamanho }); }
+      const nova=Number(baixa.rows[0].quantidade);
+      await client.query("INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao) VALUES($1,$2,$3,$4,'saida',$5,$6,$7,$8)",[item.id,item.nome,item.cor,item.tamanho,item.quantidade,nova+item.quantidade,nova,"Venda PDV "+codigo]);
+    }
+    const pedido=await client.query("INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,total,status,origem,estoque_reservado,confirmado_em) VALUES($1,$2,'Venda presencial',$3,$4,$5,$6,$6,'confirmado','pdv',FALSE,now()) RETURNING id,codigo,status,subtotal,total,criado_em",[codigo,nome,pagamento,precisaTroco,trocoPara,total]);
+    for (const item of linhas) await client.query("INSERT INTO pedido_itens(pedido_id,produto_id,produto_nome,cor,tamanho,quantidade,preco_unitario,subtotal) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[pedido.rows[0].id,item.id,item.nome,item.cor,item.tamanho,item.quantidade,item.preco,item.subtotal]);
+    await client.query("COMMIT");
+    res.status(201).json({...pedido.rows[0],forma_pagamento:pagamento,cliente_nome:nome});
+  } catch(error) { await client.query("ROLLBACK").catch(()=>{}); throw error; }
+  finally { client.release(); }
 }));
 
 // Consulta administrativa de pedidos e seus itens.

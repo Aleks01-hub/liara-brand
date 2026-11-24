@@ -80,3 +80,30 @@ CREATE TABLE IF NOT EXISTS pedido_itens (
   subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0)
 );
 CREATE INDEX IF NOT EXISTS idx_pedido_itens_pedido ON pedido_itens(pedido_id);
+
+
+-- Estoque detalhado por produto, cor e tamanho.
+CREATE TABLE IF NOT EXISTS estoque_variantes (
+  id BIGSERIAL PRIMARY KEY,
+  produto_id INTEGER NOT NULL REFERENCES produtos(id) ON DELETE CASCADE,
+  cor VARCHAR(60) NOT NULL,
+  tamanho VARCHAR(30) NOT NULL,
+  quantidade INTEGER NOT NULL DEFAULT 0 CHECK (quantidade >= 0),
+  atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (produto_id, cor, tamanho)
+);
+CREATE TABLE IF NOT EXISTS movimentacoes_estoque (
+  id BIGSERIAL PRIMARY KEY,
+  produto_id INTEGER REFERENCES produtos(id) ON DELETE SET NULL,
+  produto_nome VARCHAR(120) NOT NULL,
+  cor VARCHAR(60) NOT NULL,
+  tamanho VARCHAR(30) NOT NULL,
+  tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('entrada','saida','ajuste')),
+  quantidade INTEGER NOT NULL CHECK (quantidade >= 0),
+  quantidade_anterior INTEGER NOT NULL CHECK (quantidade_anterior >= 0),
+  quantidade_nova INTEGER NOT NULL CHECK (quantidade_nova >= 0),
+  observacao VARCHAR(240),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_estoque_produto ON estoque_variantes(produto_id);
+CREATE INDEX IF NOT EXISTS idx_mov_estoque_criado ON movimentacoes_estoque(criado_em DESC);

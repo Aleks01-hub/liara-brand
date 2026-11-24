@@ -156,6 +156,8 @@ html,body{max-width:100%;overflow-x:clip}
     <label>Nome completo<input id="cn" autocomplete="name"></label>
     <label>Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
     <label>Forma de pagamento<select id="cp"><option value="">Escolha</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select></label>
+    <label id="trocoOp" hidden>Precisa de troco?<select id="ctn"><option value="">Escolha</option><option value="Não">Não</option><option value="Sim">Sim</option></select></label>
+    <label id="trocoValor" hidden>Troco para quanto? (R$)<input id="ct" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 100,00"></label>
   </div>
   <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px"><span>Total</span><span id="total">R$ 0,00</span></div>
   <button class="btn" id="checkout" style="margin-top:12px">Finalizar compra</button>
@@ -187,8 +189,9 @@ function lerDados(){try{return JSON.parse(localStorage.getItem("liara_cliente")|
 function lojaInit(){
   document.getElementById("wa").href="https://wa.me/"+WA+"?text="+encodeURIComponent("Olá! Vim pelo catálogo da LIARA BRAND.");var p=document.getElementById("promo");if(LOJA.promo){p.textContent=LOJA.promo;p.hidden=false}
   document.getElementById("perks").innerHTML=LOJA.vantagens.map(function(v){return "<div><b>"+v[0]+"</b>"+v[1]+"</div>"}).join("");
-  var d=lerDados();["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}})});
+  var d=lerDados();["cn","ca","cp","ctn","ct"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}});e.addEventListener("change",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){};atualizarTroco()})});atualizarTroco();
 }
+function atualizarTroco(){var dinheiro=document.getElementById("cp").value==="Dinheiro",sim=document.getElementById("ctn").value==="Sim";document.getElementById("trocoOp").hidden=!dinheiro;document.getElementById("trocoValor").hidden=!(dinheiro&&sim)}
 var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
@@ -253,7 +256,13 @@ function checkout(){
   if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
   var tot=0,m="Olá! Gostaria de fazer o seguinte pedido:\n\n";
   cart.forEach(function(i){tot+=i.p*i.q;m+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+" ("+brl(i.p*i.q)+")\n"});
+  var precisaTroco=document.getElementById("ctn").value,valorTroco=Number(document.getElementById("ct").value);
+  if(document.getElementById("cp").value==="Dinheiro"){
+    if(!precisaTroco){var campo=document.getElementById("ctn");campo.focus();toast("Informe se precisa de troco");return}
+    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=tot)){var campo=document.getElementById("ct");campo.classList.add("bad");campo.focus();toast("Informe um valor para troco maior que o total do pedido");return}
+  }
   m+="\nTotal: "+brl(tot)+"\n\nNome: "+document.getElementById("cn").value.trim()+"\nEndereço: "+document.getElementById("ca").value.trim()+"\nPagamento: "+document.getElementById("cp").value;
+  if(document.getElementById("cp").value==="Dinheiro"){m+="\nPrecisa de troco: "+precisaTroco;if(precisaTroco==="Sim")m+="\nTroco para: "+brl(valorTroco)}
   var a=document.createElement("a");a.href="https://wa.me/"+WA+"?text="+encodeURIComponent(m);a.target="_blank";a.rel="noopener";
   document.body.appendChild(a);a.click();a.remove();toast("Abrindo o WhatsApp da loja");
 }

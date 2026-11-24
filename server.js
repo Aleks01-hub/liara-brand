@@ -24,6 +24,10 @@ app.get("/health", async (_req, res) => {
 });
 
 // Painel administrativo: o arquivo fica fora da pasta pública.
+app.get(["/admin/estoque", "/admin/estoque/"], (_req, res) => {
+  res.set("X-Robots-Tag", "noindex");
+  res.sendFile(path.join(__dirname, "views", "estoque.html"));
+});
 app.get(["/admin/pedidos", "/admin/pedidos/"], (_req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.sendFile(path.join(__dirname, "views", "pedidos.html"));

@@ -170,9 +170,7 @@ html,body{max-width:100%;overflow-x:clip}
   <div id="items"></div>
   <div class="fld">
     <label>Nome completo<input id="cn" autocomplete="name"></label>
-    <label>Recebimento<select id="ce" required><option value="">Escolha</option><option value="Entrega">Entrega</option><option value="Retirada">Retirada</option></select></label>
-    <label id="enderecoOp">Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
-    <label>Cupom de desconto (opcional)<input id="cc" autocomplete="off" placeholder="Digite seu cupom"></label>
+    <label>Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
     <label>Forma de pagamento<select id="cp"><option value="">Escolha</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select></label>
     <label id="trocoOp" hidden>Precisa de troco?<select id="ctn"><option value="">Escolha</option><option value="Não">Não</option><option value="Sim">Sim</option></select></label>
     <label id="trocoValor" hidden>Troco para quanto? (R$)<input id="ct" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 100,00"></label>
@@ -208,9 +206,7 @@ function lojaInit(){
   document.getElementById("wa").href="https://wa.me/"+WA+"?text="+encodeURIComponent("Olá! Vim pelo catálogo da LIARA BRAND.");var p=document.getElementById("promo");if(LOJA.promo){p.textContent=LOJA.promo;p.hidden=false}
   document.getElementById("perks").innerHTML=LOJA.vantagens.map(function(v){return "<div><b>"+v[0]+"</b>"+v[1]+"</div>"}).join("");
   var d=lerDados();["cn","ca","cp","ctn","ct"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}});e.addEventListener("change",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){};atualizarTroco()})});atualizarTroco();
-  document.getElementById("ce").addEventListener("change",atualizarRecebimento);atualizarRecebimento();
 }
-function atualizarRecebimento(){var retirada=document.getElementById("ce").value==="Retirada",op=document.getElementById("enderecoOp"),campo=document.getElementById("ca");op.hidden=retirada;campo.required=!retirada;if(retirada)campo.classList.remove("bad")}
 function atualizarTroco(){var dinheiro=document.getElementById("cp").value==="Dinheiro",sim=document.getElementById("ctn").value==="Sim";document.getElementById("trocoOp").hidden=!dinheiro;document.getElementById("trocoValor").hidden=!(dinheiro&&sim)}
 var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
@@ -321,17 +317,14 @@ document.getElementById("q").addEventListener("input",function(e){qs=e.target.va
 function addCart(id,n,c,z,p){var f=cart.filter(function(i){return i.id==id&&i.c==c&&i.z==z})[0];if(f)f.q++;else cart.push({id:id,n:n,c:c,z:z,p:p,q:1})}
 function checkout(){
   if(!cart.length){toast("Sua sacola está vazia");return}
-  var recebimento=document.getElementById("ce").value,retirada=recebimento==="Retirada";
-  var bad=null;["cn","ce","cp"].concat(retirada?[]:["ca"]).forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
-  if(bad){bad.focus();toast("Preencha nome, recebimento, endereço (se entrega) e pagamento");return}
+  var bad=null;["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
+  if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
   var pagamento=document.getElementById("cp").value;
-  var endereco=retirada?"Retirada (endereço será enviado pelo WhatsApp)":document.getElementById("ca").value.trim();
-  var cupom=document.getElementById("cc").value.trim().toUpperCase();
   var precisaTroco=document.getElementById("ctn").value,valorTroco=Number(document.getElementById("ct").value);
   var estimado=cart.reduce(function(n,i){return n+i.p*i.q},0);
   if(pagamento==="Dinheiro"){
     if(!precisaTroco){document.getElementById("ctn").focus();toast("Informe se precisa de troco");return}
-    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=0)){document.getElementById("ct").classList.add("bad");document.getElementById("ct").focus();toast("Informe um valor válido para troco");return}
+    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=estimado)){document.getElementById("ct").classList.add("bad");document.getElementById("ct").focus();toast("Informe um valor para troco maior que o total do pedido");return}
   }
   var botao=document.getElementById("checkout");
   if(botao.disabled)return;
@@ -339,9 +332,7 @@ function checkout(){
   botao.disabled=true;botao.textContent="Registrando pedido...";
   fetch("/api/pedidos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     nome:document.getElementById("cn").value.trim(),
-    endereco:endereco,
-    recebimento:recebimento,
-    cupom:cupom,
+    endereco:document.getElementById("ca").value.trim(),
     pagamento:pagamento,
     precisa_troco:pagamento==="Dinheiro"&&precisaTroco==="Sim",
     troco_para:pagamento==="Dinheiro"&&precisaTroco==="Sim"?valorTroco:null,
@@ -351,26 +342,21 @@ function checkout(){
     var linhasMensagem=[
       "Olá! Fiz um pedido pelo catálogo da LIARA BRAND.",
       "",
-      "Pedido: "+pedido.codigo+"*,
+      "🛍️ *Pedido: "+pedido.codigo+"*",
       "",
       "*Itens do pedido*"
     ];
     cart.forEach(function(i){
-      linhasMensagem.push("- "+i.q+"x "+i.n);
+      linhasMensagem.push("• "+i.q+"x "+i.n);
       linhasMensagem.push("  Cor: "+i.c+" | Tamanho: "+i.z);
     });
     linhasMensagem.push(
       "",
-      "Subtotal: "+brl(Number(pedido.subtotal))
-    );
-    if(Number(pedido.desconto)>0)linhasMensagem.push("Desconto"+(pedido.cupom_codigo?" ("+pedido.cupom_codigo+")":"")+": -"+brl(Number(pedido.desconto)));
-    linhasMensagem.push(
-      "*Total: "+brl(Number(pedido.total))+"*",
+      "💰 *Total: "+brl(Number(pedido.total))+"*",
       "",
-      "*Recebimento*",
-      "Forma: "+recebimento,
-      retirada?"O endereço para retirada será enviado pela loja neste WhatsApp.":"Endereço: "+document.getElementById("ca").value.trim(),
+      "*Dados para entrega*",
       "Nome: "+document.getElementById("cn").value.trim(),
+      "Endereço: "+document.getElementById("ca").value.trim(),
       "Pagamento: "+pagamento
     );
     if(pagamento==="Dinheiro"){

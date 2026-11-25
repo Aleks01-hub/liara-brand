@@ -217,7 +217,6 @@ const ordersTableReady = couponTableReady.then(() => db.query(`
   ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now();
   ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS confirmado_em TIMESTAMPTZ;
   ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cancelado_em TIMESTAMPTZ;
-  ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tipo_entrega VARCHAR(12) NOT NULL DEFAULT 'Entrega';
   CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
   CREATE TABLE IF NOT EXISTS pedido_itens (
     id BIGSERIAL PRIMARY KEY,
@@ -249,15 +248,11 @@ app.post("/api/pedidos", ah(async (req, res) => {
   const body = req.body || {};
   const nome = String(body.nome || "").trim();
   const endereco = String(body.endereco || "").trim();
-  const recebimento = String(body.recebimento || "");
   const pagamento = String(body.pagamento || "");
-  const cupomCodigo = String(body.cupom || "").trim().toUpperCase().replace(/\s+/g, "");
   const itens = Array.isArray(body.itens) ? body.itens : [];
-  if (!nome || nome.length > 120 || !endereco || endereco.length > 1000) return res.status(400).json({ erro: "Informe nome e dados de recebimento válidos." });
-  if (!["Entrega","Retirada"].includes(recebimento)) return res.status(400).json({ erro: "Escolha entrega ou retirada." });
-  if (recebimento==="Retirada" && !endereco.toLowerCase().startsWith("retirada")) return res.status(400).json({ erro: "Dados de retirada inválidos." });
-  if (recebimento==="Entrega" && endereco.toLowerCase().startsWith("retirada")) return res.status(400).json({ erro: "Informe o endereço para entrega." });
-  if (cupomCodigo.length>40) return res.status(400).json({ erro: "O código do cupom é muito longo." });
+  if (!nome || nome.length > 120 || !endereco || endereco.length > 1000) {
+    return res.status(400).json({ erro: "Informe nome e endereço válidos." });
+  }
   if (!["Pix", "Cartão", "Dinheiro"].includes(pagamento)) {
     return res.status(400).json({ erro: "Forma de pagamento inválida." });
   }
@@ -306,19 +301,7 @@ app.post("/api/pedidos", ah(async (req, res) => {
       linhas.push({ ...item, cor: corCanonica, nome: p.nome, preco, subtotal: linhaSubtotal });
     }
     subtotal = Math.round(subtotal * 100) / 100;
-    let cupom=null, desconto=0;
-    if(cupomCodigo){
-      const cr=await client.query("SELECT * FROM cupons WHERE upper(codigo)=upper($1) FOR UPDATE",[cupomCodigo]);
-      cupom=cr.rows[0];
-      const hoje=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);
-      if(!cupom||!cupom.ativo||(cupom.data_inicio&&String(cupom.data_inicio).slice(0,10)>hoje)||(cupom.data_fim&&String(cupom.data_fim).slice(0,10)<hoje)||(cupom.limite_usos!=null&&Number(cupom.usos)>=Number(cupom.limite_usos))||subtotal<Number(cupom.valor_minimo)){
-        await client.query("ROLLBACK");return res.status(400).json({erro:"Cupom inválido, expirado, indisponível ou não aplicável a este valor."});
-      }
-      desconto=cupom.tipo_desconto==="percentual"?Math.round(subtotal*Number(cupom.valor_desconto))/100:Math.round(Number(cupom.valor_desconto)*100)/100;
-      desconto=Math.min(subtotal,Math.round(desconto*100)/100);
-    }
-    const total=Math.round((subtotal-desconto)*100)/100;
-    if (precisaTroco && trocoPara <= total) {
+    if (precisaTroco && trocoPara <= subtotal) {
       await client.query("ROLLBACK");
       return res.status(400).json({ erro: "O valor informado para troco precisa ser maior que o total." });
     }
@@ -342,8 +325,8 @@ app.post("/api/pedidos", ah(async (req, res) => {
     }
 
     const pedido = await client.query(
-      "INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,desconto,total,cupom_id,cupom_codigo,tipo_entrega,estoque_reservado) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,TRUE) RETURNING id,codigo,status,subtotal,desconto,total,cupom_codigo,criado_em",
-      [codigo,nome,endereco,pagamento,precisaTroco,trocoPara,subtotal,desconto,total,cupom?cupom.id:null,cupom?cupom.codigo:null,recebimento]
+      "INSERT INTO pedidos(codigo,cliente_nome,endereco_entrega,forma_pagamento,precisa_troco,troco_para,subtotal,total,estoque_reservado) VALUES($1,$2,$3,$4,$5,$6,$7,$7,TRUE) RETURNING id,codigo,status,subtotal,total,criado_em",
+      [codigo,nome,endereco,pagamento,precisaTroco,trocoPara,subtotal]
     );
     for (const item of linhas) {
       await client.query(
@@ -351,9 +334,8 @@ app.post("/api/pedidos", ah(async (req, res) => {
         [pedido.rows[0].id,item.id,item.nome,item.cor,item.tamanho,item.quantidade,item.preco,item.subtotal]
       );
     }
-    if(cupom)await client.query("UPDATE cupons SET usos=usos+1,atualizado_em=now() WHERE id=$1",[cupom.id]);
     await client.query("COMMIT");
-    res.status(201).json({ ...pedido.rows[0], pagamento, recebimento, precisa_troco: precisaTroco, troco_para: trocoPara });
+    res.status(201).json({ ...pedido.rows[0], pagamento, precisa_troco: precisaTroco, troco_para: trocoPara });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;
@@ -835,8 +817,7 @@ app.get("/api/admin/produtos", auth, ah(async (_req, res) => {
 app.get("/api/produtos", ah(async (_req, res) => {
   await catalogVisibilityReady;
   await stockTablesReady;
-  // A vitrine pública lista os produtos cadastrados; o painel continua administrando o catálogo.
-  const result = await db.query(productRowsSql + " ORDER BY p.id");
+  const result = await db.query(productRowsSql + " WHERE p.visivel_catalogo IS TRUE ORDER BY p.id");
   res.set("Cache-Control", "no-store");
   res.json(result.rows);
 }));

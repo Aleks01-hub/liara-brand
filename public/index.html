@@ -209,31 +209,34 @@ function estoqueCorTotal(p,cor){
   },0);
 }
 function atualizarDisponibilidadeCard(cd,p){
-  var s=sel[p.id],cor=C[s.c][0],disponivel=s.z?estoqueQtd(p,cor,s.z):0;
+  var s=sel[p.id],cor=C[s.c][0],disponivel=s.z?estoqueQtd(p,cor,s.z):estoqueCorTotal(p,cor);
   cd.querySelectorAll(".sw").forEach(function(b){
     var qtd=s.z?estoqueQtd(p,C[b.dataset.k][0],s.z):estoqueCorTotal(p,C[b.dataset.k][0]);
-    b.disabled=qtd<1;
-    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"+(s.z?" neste tamanho":" nesta cor")):"Indisponível";
+    b.disabled=false;
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"+(s.z?" neste tamanho":" nesta cor")):"Esgotado nesta combinação";
+    b.setAttribute("aria-pressed",b.dataset.k===s.c?"true":"false");
   });
   cd.querySelectorAll(".sz").forEach(function(b){
     var qtd=estoqueQtd(p,cor,b.dataset.z);
-    b.disabled=qtd<1;
-    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Indisponível nesta cor";
-    if(qtd<1&&s.z===b.dataset.z){s.z=null;b.setAttribute("aria-pressed","false")}
+    b.disabled=false;
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Esgotado nesta combinação";
+    b.setAttribute("aria-pressed",b.dataset.z===s.z?"true":"false");
   });
+  var aviso=cd.querySelector(".stock-flag");
+  if(aviso)aviso.hidden=disponivel>0;
   var add=cd.querySelector(".add");
-  add.disabled=!s.z||disponivel<1;
-  add.textContent=!s.z?"Escolha um tamanho":disponivel<1?"Esgotado":"Adicionar à sacola";
+  add.disabled=!s.z||estoqueQtd(p,cor,s.z)<1;
+  add.textContent=!s.z?"Escolha um tamanho":add.disabled?"Esgotado":"Adicionar à sacola";
 }
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
   var sw=p.c.map(function(k){
     var qtd=s.z?estoqueQtd(p,C[k][0],s.z):estoqueCorTotal(p,C[k][0]);
-    return '<button class="sw" data-k="'+k+'" '+(qtd<1?'disabled':'')+' aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Indisponível")+'" style="background:'+C[k][1]+'"></button>';
+    return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'" style="background:'+C[k][1]+'"></button>';
   }).join("");
-  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz" data-z="'+z+'" '+(qtd<1?'disabled':'')+' aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Indisponível nesta cor")+'">'+z+'</button>'}).join("");
-  var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):0;
-  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
+  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz" data-z="'+z+'" aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'">'+z+'</button>'}).join("");
+  var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):estoqueCorTotal(p,C[s.c][0]);
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="stock-flag"'+(qtdInicial>0?' hidden':'')+'>Esgotado</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
 }
 function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
 function ok(p){

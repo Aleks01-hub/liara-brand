@@ -138,19 +138,27 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
 </div></div>
 <div id="toast" role="status"></div>
 <script>
-var T=localStorage.getItem("tk"),L=[],F=null,dirty=false,photoTarget="main",$=function(i){return document.getElementById(i)};
+var T=localStorage.getItem("tk"),L=[],F=null,CORES=[],dirty=false,photoTarget="main",$=function(i){return document.getElementById(i)};
 var PRE=[["Preto","#231f1c"],["Branco","#ffffff"],["Off-white","#f5efe6"],["Bege","#d9c4a3"],["Chocolate","#4b2a22"],["Vinho","#7a1f3d"],["Vermelho","#d03a3a"],["Rosa","#e79ab5"],["Lilás","#b79cff"],["Azul","#3b6fd0"],["Azul marinho","#1f2a4a"],["Verde","#3f8a6a"],["Mostarda","#e3a82b"],["Cinza","#9a98a6"]];
 var TAM=["PP","P","M","G","GG","XG","Único","34","36","38","40","42","44"];
 function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function brl(v){return "R$ "+Number(v).toFixed(2).replace(".",",")}
 function toast(t,bad){var e=$("toast");e.textContent=t;e.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(function(){e.className=""},2800)}
 function api(u,m,b){return fetch(u,{method:m||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+T},body:b?JSON.stringify(b):undefined}).then(function(r){if(r.status==401&&T){sair(true);return{erro:"auth"}}return r.json()}).catch(function(){toast("Sem conexão. Tente de novo.",true);return{erro:"rede"}})}
-function mostrar(){var on=!!T;$("login").hidden=on;$("app").hidden=!on;$("sair").hidden=!on;if(on)listar()}
+function mostrar(){var on=!!T;$("login").hidden=on;$("app").hidden=!on;$("sair").hidden=!on;if(on){listar();carregarCores()}}
 function sair(exp){T=null;localStorage.removeItem("tk");mostrar();if(exp)toast("Sessão expirada. Entre de novo.",true)}
 function entrar(){var u=$("u").value.trim(),s=$("s").value;if(!u||!s)return toast("Digite usuário e senha",true);$("entrar").disabled=true;
   fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario:u,senha:s})}).then(function(r){return r.json()}).then(function(d){if(d.token){T=d.token;localStorage.setItem("tk",T);$("s").value="";mostrar()}else toast(d.erro||"Falha no login",true)}).catch(function(){toast("Sem conexão",true)}).then(function(){$("entrar").disabled=false})}
 $("entrar").onclick=entrar;$("s").onkeydown=function(e){if(e.key=="Enter")entrar()};$("sair").onclick=function(){sair()};
 function cats(){var a=L.map(function(p){return p.categoria}).filter(function(c,i,a){return c&&a.indexOf(c)==i});if(a.indexOf("Acessórios")<0)a.push("Acessórios");return a.sort()}
+function sugestoes(){
+  var mapa={};
+  PRE.concat(CORES.map(function(v){return [v.nome,v.hex]})).forEach(function(v){mapa[String(v[0]).toLowerCase()]={nome:v[0],hex:v[1]}});
+  $("pre").innerHTML=Object.keys(mapa).sort().map(function(k){var v=mapa[k];return '<button class="chip" data-pre="'+esc(v.nome)+'" data-hex="'+esc(v.hex)+'"><i class="dot" style="background:'+esc(v.hex)+'"></i>'+esc(v.nome)+'</button>'}).join("");
+}
+function carregarCores(){
+  api("/api/admin/cores").then(function(d){if(!Array.isArray(d))return;CORES=d;sugestoes()});
+}
 function listar(){api("/api/admin/produtos").then(function(d){if(!Array.isArray(d))return;L=d;
   var v=$("fcat").value;$("fcat").innerHTML='<option value="">Todas as categorias</option>'+cats().map(function(c){return "<option>"+esc(c)+"</option>"}).join("");$("fcat").value=v;
   $("cats").innerHTML=cats().map(function(c){return '<option value="'+esc(c)+'">'}).join("");render()})}
@@ -180,7 +188,7 @@ function abrir(p){F=p?JSON.parse(JSON.stringify(p)):{genero:"Feminino",variantes
   $("mt").textContent=p?"Editar produto":"Novo produto";
   $("f_nome").value=F.nome||"";$("f_desc").value=F.descricao||"";$("f_cat").value=F.categoria||"";$("f_preco").value=F.preco!=null?F.preco:"";$("f_antigo").value=F.preco_antigo||"";$("f_tam").value="";
   $("f_est").checked=F.em_estoque!==false;$("f_dest").checked=!!F.destaque;
-  $("pre").innerHTML=PRE.map(function(c){return '<button class="chip" data-pre="'+esc(c[0])+'" data-hex="'+c[1]+'"><i class="dot" style="background:'+c[1]+'"></i>'+c[0]+"</button>"}).join("");
+  sugestoes();
   pintar();dirty=false;photoTarget="main";$("modal").hidden=false;document.body.style.overflow="hidden";$("sheet").scrollTop=0}
 function pintar(){document.querySelectorAll("[data-g]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.g==F.genero)});foto();cores();tams();grade();nota()}
 function grade(){
@@ -236,13 +244,18 @@ function salvar(){
   var novo=!F.id;$("salvar").disabled=true;$("salvar").textContent="Salvando...";
   api(novo?"/api/produtos":"/api/produtos/"+F.id,novo?"POST":"PUT",payload(F,{variantes:vs,preco_antigo:F.preco_antigo||null,imagem_url:F.imagem_url||null})).then(function(d){
     if(d.erro){if(d.erro!="auth"&&d.erro!="rede")toast(d.erro,true);return}
-    if(novo)return d;
-    var id=F.id,gradeAtual=F.estoqueGrade||{},antigos=F.estoque_variantes||[],tarefas=[];
-    F.tamanhos.forEach(function(t){vs.forEach(function(v){var key=v.cor.toLowerCase()+"|"+String(t),q=Math.max(0,Math.min(100000,Math.floor(Number(gradeAtual[key])||0))),old=antigos.filter(function(x){return String(x.cor).toLowerCase()===v.cor.toLowerCase()&&String(x.tamanho)===String(t)})[0],antes=old?Number(old.quantidade)||0:0;if(q!==antes)tarefas.push({produto_id:id,cor:v.cor,tamanho:String(t),tipo:"ajuste",quantidade:q,observacao:"Atualização pela grade do produto"})})});
-    return tarefas.reduce(function(promise,item){return promise.then(function(){return api("/api/admin/estoque/movimentacoes","POST",item).then(function(r){if(r.erro)throw Error(r.erro)})})},Promise.resolve()).then(function(){return d});
+    var produto=d,id=novo?Number(d.id):F.id;
+    return api("/api/admin/cores","POST",{cores:vs}).then(function(lista){
+      if(!Array.isArray(lista))throw Error(lista.erro||"Não foi possível salvar a biblioteca de cores.");
+      CORES=lista;sugestoes();
+      if(novo)return produto;
+      var gradeAtual=F.estoqueGrade||{},antigos=F.estoque_variantes||[],tarefas=[];
+      F.tamanhos.forEach(function(t){vs.forEach(function(v){var key=v.cor.toLowerCase()+"|"+String(t),q=Math.max(0,Math.min(100000,Math.floor(Number(gradeAtual[key])||0))),old=antigos.filter(function(x){return String(x.cor).toLowerCase()===v.cor.toLowerCase()&&String(x.tamanho)===String(t)})[0],antes=old?Number(old.quantidade)||0:0;if(q!==antes)tarefas.push({produto_id:id,cor:v.cor,tamanho:String(t),tipo:"ajuste",quantidade:q,observacao:"Atualização pela grade do produto"})})});
+      return tarefas.reduce(function(promise,item){return promise.then(function(){return api("/api/admin/estoque/movimentacoes","POST",item).then(function(r){if(r.erro)throw Error(r.erro)})})},Promise.resolve()).then(function(){return produto});
+    });
   }).then(function(d){
     if(!d)return;
     dirty=false;fechar();toast(novo?"Produto cadastrado":"Produto atualizado");listar()
-  }).catch(function(e){toast("Produto salvo, mas houve falha ao atualizar a grade: "+e.message,true);listar()}).then(function(){$("salvar").disabled=false;$("salvar").textContent="Salvar produto"})}
+  }).catch(function(e){toast("Produto salvo, mas houve falha ao salvar cores/estoque: "+e.message,true);listar()}).then(function(){$("salvar").disabled=false;$("salvar").textContent="Salvar produto"})}
 mostrar();
 </script></body></html>

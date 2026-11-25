@@ -21,7 +21,7 @@ input,select{width:100%;border:1.5px solid var(--line);background:var(--card);bo
 .bar nav a{white-space:nowrap}
 @media(max-width:760px){.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%;gap:6px}.bar nav a,.bar nav button{font-size:13px;padding:7px 9px}}
 </style></head><body>
-<header class="bar"><b>LIARA <span>Pedidos</span></b><nav><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn alt" id="logout">Sair</button></nav></header>
+<header class="bar"><b>LIARA <span>Pedidos</span></b><nav><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/admin/clientes">Clientes</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn alt" id="logout">Sair</button></nav></header>
 <main><section class="intro"><h1>Pedidos da loja</h1><div class="muted">Pedidos feitos pelo catálogo e, futuramente, pelo PDV. Confirme a venda somente depois de validar o pagamento.</div></section>
 <div class="stats" id="stats"></div>
 <div class="toolbar"><input id="search" type="search" placeholder="Buscar código ou cliente"><select id="filter"><option value="">Todos os status</option><option value="pendente">Pendentes</option><option value="confirmado">Confirmados</option><option value="cancelado">Cancelados</option></select><button class="btn alt" id="refresh">Atualizar</button></div>

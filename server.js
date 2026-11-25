@@ -525,7 +525,36 @@ const colorTableReady = db.query(`
     id BIGSERIAL PRIMARY KEY,
     nome VARCHAR(60) NOT NULL,
     nome_normalizado VARCHAR(60) NOT NULL UNIQUE,
-    hex CHAR(7) NOT NULL CHECK (hex ~ '^#[0-9A-Fa-f]{6}
+    hex CHAR(7) NOT NULL CHECK (hex ~ '^#[0-9A-Fa-f]{6}$'),
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+`).then(async () => {
+  // Importa todas as cores existentes nos produtos e ignora nomes duplicados.
+  await db.query(`
+    INSERT INTO cores_catalogo (nome,nome_normalizado,hex)
+    SELECT DISTINCT ON (lower(btrim(item->>'cor')))
+      btrim(item->>'cor'),
+      lower(btrim(item->>'cor')),
+      CASE
+        WHEN btrim(COALESCE(item->>'hex','')) ~ '^#[0-9A-Fa-f]{6}$'
+        THEN upper(btrim(item->>'hex'))
+        ELSE '#CCCCCC'
+      END
+    FROM produtos p
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE WHEN jsonb_typeof(p.variantes)='array' THEN p.variantes ELSE '[]'::jsonb END
+    ) item
+    WHERE btrim(COALESCE(item->>'cor','')) <> ''
+    ORDER BY lower(btrim(item->>'cor')), p.id
+    ON CONFLICT (nome_normalizado) DO NOTHING
+  `);
+  return true;
+}).catch((error) => {
+  console.error("Não foi possível preparar/importar a biblioteca de cores:", error.message);
+  throw error;
+});
+
 app.get("/api/admin/estoque", auth, ah(async (_req, res) => {
   await stockTablesReady;
   const result = await db.query(`

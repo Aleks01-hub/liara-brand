@@ -66,7 +66,8 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0}
 .sw[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
 .sz{min-width:36px;height:32px;border:1.5px solid var(--line);background:none;border-radius:8px;font-weight:700;font-size:13px}
-.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}.sz:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.sw:disabled,.sz:disabled{opacity:.28;cursor:not-allowed;border-style:dashed;border-color:var(--mute);filter:grayscale(.35)}
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
 .out .pic{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
 .qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}
@@ -199,15 +200,25 @@ function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></s
 function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
 function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
 function estoqueQtd(p,cor,tamanho){
-  var item=(p.stock||[]).filter(function(x){return String(x.cor).toLowerCase()===String(cor).toLowerCase()&&x.tamanho===tamanho})[0];
+  var item=(p.stock||[]).filter(function(x){return String(x.cor).toLowerCase()===String(cor).toLowerCase()&&String(x.tamanho)===String(tamanho)})[0];
   return item?Number(item.quantidade)||0:0;
 }
+function estoqueCorTotal(p,cor){
+  return (p.stock||[]).reduce(function(total,x){
+    return total+(String(x.cor).toLowerCase()===String(cor).toLowerCase()?(Number(x.quantidade)||0):0);
+  },0);
+}
 function atualizarDisponibilidadeCard(cd,p){
-  var s=sel[p.id],cor=C[s.c][0],temEscolha=!!s.z,disponivel=temEscolha?estoqueQtd(p,cor,s.z):0;
+  var s=sel[p.id],cor=C[s.c][0],disponivel=s.z?estoqueQtd(p,cor,s.z):0;
+  cd.querySelectorAll(".sw").forEach(function(b){
+    var qtd=s.z?estoqueQtd(p,C[b.dataset.k][0],s.z):estoqueCorTotal(p,C[b.dataset.k][0]);
+    b.disabled=qtd<1;
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"+(s.z?" neste tamanho":" nesta cor")):"Indisponível";
+  });
   cd.querySelectorAll(".sz").forEach(function(b){
     var qtd=estoqueQtd(p,cor,b.dataset.z);
     b.disabled=qtd<1;
-    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Esgotado nesta combinação";
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Indisponível nesta cor";
     if(qtd<1&&s.z===b.dataset.z){s.z=null;b.setAttribute("aria-pressed","false")}
   });
   var add=cd.querySelector(".add");
@@ -216,8 +227,11 @@ function atualizarDisponibilidadeCard(cd,p){
 }
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
-  var sw=p.c.map(function(k){return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" style="background:'+C[k][1]+'"></button>'}).join("");
-  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz" data-z="'+z+'" '+(qtd<1?'disabled':'')+' aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'">'+z+'</button>'}).join("");
+  var sw=p.c.map(function(k){
+    var qtd=s.z?estoqueQtd(p,C[k][0],s.z):estoqueCorTotal(p,C[k][0]);
+    return '<button class="sw" data-k="'+k+'" '+(qtd<1?'disabled':'')+' aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Indisponível")+'" style="background:'+C[k][1]+'"></button>';
+  }).join("");
+  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz" data-z="'+z+'" '+(qtd<1?'disabled':'')+' aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Indisponível nesta cor")+'">'+z+'</button>'}).join("");
   var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):0;
   return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
 }
@@ -254,12 +268,14 @@ document.addEventListener("click",function(e){
   if(cd){
     var id=+cd.dataset.id,p=P.filter(function(x){return x.id==id})[0];
     if(t.classList.contains("sw")){
+      if(t.disabled)return;
       sel[id].c=t.dataset.k;
       cd.querySelectorAll(".sw").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
       var im=cd.querySelector(".pic img");if(im&&p.imgs)im.src=p.imgs[t.dataset.k];var sv=cd.querySelector(".pic svg");if(sv)sv.setAttribute("fill",C[t.dataset.k][1]);
       cd.querySelector(".cn").textContent=C[t.dataset.k][0];
       atualizarDisponibilidadeCard(cd,p);
     }else if(t.classList.contains("sz")){
+      if(t.disabled)return;
       sel[id].z=t.dataset.z;
       cd.querySelectorAll(".sz").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
       atualizarDisponibilidadeCard(cd,p);

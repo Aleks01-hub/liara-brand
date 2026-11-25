@@ -240,6 +240,7 @@ function valorMonetario(v) {
 // Cria pedido pendente usando preço e disponibilidade consultados no banco, nunca os valores enviados pelo navegador.
 app.post("/api/pedidos", ah(async (req, res) => {
   await ordersTableReady;
+  await clientsTableReady;
   await stockTablesReady;
   const body = req.body || {};
   const nome = String(body.nome || "").trim();
@@ -344,6 +345,7 @@ app.post("/api/pedidos", ah(async (req, res) => {
 // Venda presencial pelo PDV: autenticação obrigatória, preço e estoque sempre conferidos no banco.
 app.post("/api/admin/pdv/venda", auth, ah(async (req, res) => {
   await ordersTableReady;
+  await clientsTableReady;
   await stockTablesReady;
   const body = req.body || {};
   const nome = String(body.nome || "Cliente balcão").trim().slice(0,120) || "Cliente balcão";
@@ -590,6 +592,22 @@ app.get("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
 
 
 // Cadastro e histórico de clientes.
+async function registrarClienteDoPedido(client, nome, endereco) {
+  const nomeLimpo = String(nome || "").trim();
+  if (!nomeLimpo || nomeLimpo.toLowerCase() === "cliente balcão") return;
+  const encontrado = await client.query(
+    "SELECT id FROM clientes WHERE lower(trim(nome))=lower(trim($1)) ORDER BY id LIMIT 1 FOR UPDATE",
+    [nomeLimpo]
+  );
+  if (encontrado.rows[0]) {
+    if (endereco && endereco !== "Venda presencial") {
+      await client.query("UPDATE clientes SET endereco=$1,atualizado_em=now() WHERE id=$2", [endereco, encontrado.rows[0].id]);
+    }
+    return;
+  }
+  await client.query("INSERT INTO clientes(nome,endereco) VALUES($1,$2)", [nomeLimpo, endereco || null]);
+}
+
 const clientsTableReady = ordersTableReady.then(() => db.query(`
   CREATE TABLE IF NOT EXISTS clientes (
     id BIGSERIAL PRIMARY KEY,

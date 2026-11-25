@@ -199,7 +199,8 @@ function ordenar(){var t=TAM.slice();F.tamanhos.forEach(function(x){if(t.indexOf
 function fechar(){if(dirty&&!confirm("Descartar as alterações deste produto?"))return;dirty=false;$("modal").hidden=true;document.body.style.overflow=""}
 document.addEventListener("keydown",function(e){if(e.key=="Escape"&&!$("modal").hidden)fechar()});
 $("modal").addEventListener("input",function(e){var t=e.target;if(t.dataset.stockQty!==undefined){var q=Math.max(0,Math.min(100000,Math.floor(Number(t.value)||0)));F.estoqueGrade[t.dataset.key]=q;dirty=true;return}dirty=true;if(t.id=="f_preco"||t.id=="f_antigo")nota();var r=t.closest(".cr");if(r&&t.dataset.k&&t.dataset.k!="img")F.variantes[+r.dataset.i][t.dataset.k]=t.value});
-$("modal").addEventListener("change",function(e){var t=e.target;if(t.closest(".cr")&&t.dataset.k==="cor")grade()});
+$("modal").addEventListener("focusin",function(e){if(e.target.dataset.k==="cor")e.target.dataset.previousColor=e.target.value});
+$("modal").addEventListener("change",function(e){var t=e.target;if(t.closest(".cr")&&t.dataset.k==="cor"){var old=String(t.dataset.previousColor||"").toLowerCase(),now=String(t.value||"").trim().toLowerCase();if(old&&now&&old!==now){F.tamanhos.forEach(function(size){var a=old+"|"+String(size),b=now+"|"+String(size);if(F.estoqueGrade[a]!==undefined){F.estoqueGrade[b]=F.estoqueGrade[a];delete F.estoqueGrade[a]}})}grade()}});
 $("modal").addEventListener("click",function(e){if(e.target.id=="modal")return fechar();var b=e.target.closest("button");if(!b)return;
   if(b.dataset.g){F.genero=b.dataset.g;dirty=true;pintar()}
   else if(b.dataset.t){var i=F.tamanhos.indexOf(b.dataset.t);if(i>=0)F.tamanhos.splice(i,1);else F.tamanhos.push(b.dataset.t);ordenar();dirty=true;tams();grade()}

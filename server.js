@@ -745,7 +745,7 @@ app.put("/api/produtos/:id", auth, ah(async (req, res) => {
   await catalogVisibilityReady;
   const v = campos(req.body || {});
   if (!v) return res.status(400).json({ erro: "Nome e preço válido são obrigatórios" });
-  const sets = COLS.split(",").map((c, i) => `${c}=${i + 1}`).join(",");
+  const sets = COLS.split(",").map((c, i) => c + "=$" + (i + 1)).join(",");
   const result = await db.query(
     `UPDATE produtos SET ${sets}, data_atualizacao=now() WHERE id=$13 RETURNING *`,
     [...v, Number(req.params.id)]

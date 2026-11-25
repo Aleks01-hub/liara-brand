@@ -68,6 +68,12 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sz{min-width:36px;height:32px;border:1.5px solid var(--line);background:none;border-radius:8px;font-weight:700;font-size:13px}
 .sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .sw:disabled,.sz:disabled{opacity:.28;cursor:not-allowed;border-style:dashed;border-color:var(--mute);filter:grayscale(.35)}
+/* Seleção de cor e tamanho com contraste reforçado */
+.sw[aria-pressed="true"]{outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 5px rgba(31,47,70,.9);transform:scale(1.08)}
+.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border:2px solid #fff;box-shadow:0 0 0 2px rgba(31,47,70,.85);font-weight:800}
+.stock-flag{position:absolute;z-index:3;left:0;right:0;bottom:0;background:#c62828;color:#fff;text-align:center;font-size:12px;font-weight:800;letter-spacing:.04em;padding:7px 10px;border-radius:0 0 14px 14px;box-shadow:0 -2px 8px rgba(0,0,0,.18)}
+.stock-flag[hidden]{display:none}
+
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
 .out .pic{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
 .qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}

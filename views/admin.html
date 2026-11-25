@@ -58,6 +58,14 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
 .fr{display:flex;gap:14px;align-items:center}.fp{width:96px;height:120px;border-radius:10px;background:var(--soft);overflow:hidden;display:grid;place-items:center;color:var(--mute);font-size:12px;flex:none}
 .cr{display:grid;grid-template-columns:44px minmax(0,1fr) 44px auto auto auto;gap:8px;align-items:center;margin-bottom:8px}.move{display:flex;gap:3px}.move button{border:1px solid var(--line);background:none;border-radius:7px;padding:5px 8px;font-weight:700}.move button:disabled{opacity:.35;cursor:not-allowed}.cr input[type=color]{padding:2px;height:40px}
 .ph{width:44px;height:44px;border-radius:8px;background:var(--soft);overflow:hidden;display:grid;place-items:center;font-size:10px;color:var(--mute);text-align:center}
+.photo-drop{border:2px dashed var(--line);border-radius:12px;background:var(--soft);padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;min-height:104px;transition:border-color .15s,background .15s}
+.photo-drop.over{border-color:var(--acc);background:var(--card)}
+.photo-drop .drop-copy{font-size:13px;color:var(--mute);line-height:1.4}
+.photo-drop strong{display:block;color:var(--ink);font-size:14px}
+.photo-drop input{display:none}
+.ph[data-photo-target]{cursor:pointer;outline-offset:2px}
+.ph[data-photo-target].over{outline:2px dashed var(--acc);background:var(--card)}
+
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1.5px solid var(--line);background:none;border-radius:99px;padding:5px 12px;font-weight:700;font-size:13px}
 .chip[aria-pressed="true"]{background:var(--acc);color:var(--ai);border-color:var(--acc)}
 .add{display:grid;grid-template-columns:1fr auto;gap:8px}
@@ -98,7 +106,11 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
       <label>Preço antigo (R$)<input id="f_antigo" type="number" inputmode="decimal" step="0.01" min="0"></label></div><p class="mt" id="nota" style="margin:0"></p>
     </fieldset>
     <fieldset><legend>3 · Foto principal</legend>
-      <div class="fr"><div class="fp" id="fprev"></div><div style="display:grid;gap:8px"><label class="btn g" style="color:var(--acc)">Enviar foto<input type="file" id="f_foto" accept="image/*" hidden></label><button class="btn g sm" id="frm">Remover foto</button><p class="mt" style="margin:0">Prefira foto vertical. Ela é reduzida automaticamente.</p></div></div>
+      <div class="photo-drop" id="fdrop" data-photo-target="main" tabindex="0" role="button" aria-label="Adicionar foto principal">
+        <div class="fp" id="fprev"></div><div class="drop-copy"><strong>Arraste a foto aqui</strong>ou clique para escolher um arquivo.<br>Também pode copiar uma imagem e usar <b>Ctrl + V</b>.<br><small>JPG, PNG ou WebP · a imagem é reduzida automaticamente.</small>
+        <input type="file" id="f_foto" accept="image/*"></div>
+      </div>
+      <button class="btn g sm" id="frm" style="margin-top:8px">Remover foto principal</button>
     </fieldset>
     <fieldset><legend>4 · Cores</legend>
       <p class="mt" style="margin:0">Cada cor pode ter a sua foto. Quando o cliente escolhe a cor, a foto troca.</p>
@@ -118,7 +130,7 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
 </div></div>
 <div id="toast" role="status"></div>
 <script>
-var T=localStorage.getItem("tk"),L=[],F=null,dirty=false,$=function(i){return document.getElementById(i)};
+var T=localStorage.getItem("tk"),L=[],F=null,dirty=false,photoTarget="main",$=function(i){return document.getElementById(i)};
 var PRE=[["Preto","#231f1c"],["Branco","#ffffff"],["Off-white","#f5efe6"],["Bege","#d9c4a3"],["Chocolate","#4b2a22"],["Vinho","#7a1f3d"],["Vermelho","#d03a3a"],["Rosa","#e79ab5"],["Lilás","#b79cff"],["Azul","#3b6fd0"],["Azul marinho","#1f2a4a"],["Verde","#3f8a6a"],["Mostarda","#e3a82b"],["Cinza","#9a98a6"]];
 var TAM=["PP","P","M","G","GG","XG","Único","34","36","38","40","42","44"];
 function esc(t){return String(t==null?"":t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -159,11 +171,11 @@ function abrir(p){F=p?JSON.parse(JSON.stringify(p)):{genero:"Feminino",variantes
   $("f_nome").value=F.nome||"";$("f_desc").value=F.descricao||"";$("f_cat").value=F.categoria||"";$("f_preco").value=F.preco!=null?F.preco:"";$("f_antigo").value=F.preco_antigo||"";$("f_tam").value="";
   $("f_est").checked=F.em_estoque!==false;$("f_dest").checked=!!F.destaque;
   $("pre").innerHTML=PRE.map(function(c){return '<button class="chip" data-pre="'+esc(c[0])+'" data-hex="'+c[1]+'"><i class="dot" style="background:'+c[1]+'"></i>'+c[0]+"</button>"}).join("");
-  pintar();dirty=false;$("modal").hidden=false;document.body.style.overflow="hidden";$("sheet").scrollTop=0}
+  pintar();dirty=false;photoTarget="main";$("modal").hidden=false;document.body.style.overflow="hidden";$("sheet").scrollTop=0}
 function pintar(){document.querySelectorAll("[data-g]").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.g==F.genero)});foto();cores();tams();nota()}
 function nota(){var a=+$("f_antigo").value,p=+$("f_preco").value;$("nota").textContent=a>p&&p>0?"Desconto de "+Math.round((1-p/a)*100)+"% aparece no site.":(a&&a<=p?"O preço antigo precisa ser maior que o preço atual.":"")}
 function foto(){$("fprev").innerHTML=F.imagem_url?'<img src="'+esc(F.imagem_url)+'" alt="">':"sem foto";$("frm").hidden=!F.imagem_url}
-function cores(){$("cores").innerHTML=F.variantes.map(function(v,i){return '<div class="cr" data-i="'+i+'"><input type="color" data-k="hex" aria-label="Cor" value="'+(/^#[0-9a-f]{6}$/i.test(v.hex)?v.hex:"#cccccc")+'"><input data-k="cor" value="'+esc(v.cor)+'" placeholder="Nome da cor" aria-label="Nome da cor"><span class="ph">'+(v.imagem?'<img src="'+esc(v.imagem)+'" alt="">':"sem foto")+'</span><label class="btn g sm">Foto<input type="file" accept="image/*" hidden data-k="img"></label><span class="move"><button type="button" data-up aria-label="Mover cor para cima" title="Mover para cima" '+(i===0?"disabled":"")+'>↑</button><button type="button" data-down aria-label="Mover cor para baixo" title="Mover para baixo" '+(i===F.variantes.length-1?"disabled":"")+'>↓</button></span><button class="x" data-rc aria-label="Remover cor">✕</button></div>'}).join("")||'<p class="mt" style="margin:0">Nenhuma cor ainda. Toque em uma sugestão ou em "Adicionar cor".</p>'}
+function cores(){$("cores").innerHTML=F.variantes.map(function(v,i){return '<div class="cr" data-i="'+i+'"><input type="color" data-k="hex" aria-label="Cor" value="'+(/^#[0-9a-f]{6}$/i.test(v.hex)?v.hex:"#cccccc")+'"><input data-k="cor" value="'+esc(v.cor)+'" placeholder="Nome da cor" aria-label="Nome da cor"><div class="ph" data-photo-target="variant:'+i+'" tabindex="0" role="button" title="Clique, arraste uma foto ou cole com Ctrl+V">'+(v.imagem?'<img src="'+esc(v.imagem)+'" alt="">':"Foto")+'</div><label class="btn g sm">Foto<input type="file" accept="image/*" hidden data-k="img"></label><span class="move"><button type="button" data-up aria-label="Mover cor para cima" title="Mover para cima" '+(i===0?"disabled":"")+'>↑</button><button type="button" data-down aria-label="Mover cor para baixo" title="Mover para baixo" '+(i===F.variantes.length-1?"disabled":"")+'>↓</button></span><button class="x" data-rc aria-label="Remover cor">✕</button></div>'}).join("")||'<p class="mt" style="margin:0">Nenhuma cor ainda. Toque em uma sugestão ou em "Adicionar cor".</p>'}
 function tams(){var t=TAM.slice();F.tamanhos.forEach(function(x){if(t.indexOf(x)<0)t.push(x)});$("tams").innerHTML=t.map(function(x){return '<button class="chip" data-t="'+esc(x)+'" aria-pressed="'+(F.tamanhos.indexOf(x)>=0)+'">'+esc(x)+"</button>"}).join("")}
 function ordenar(){var t=TAM.slice();F.tamanhos.forEach(function(x){if(t.indexOf(x)<0)t.push(x)});F.tamanhos=t.filter(function(x){return F.tamanhos.indexOf(x)>=0})}
 function fechar(){if(dirty&&!confirm("Descartar as alterações deste produto?"))return;dirty=false;$("modal").hidden=true;document.body.style.overflow=""}
@@ -180,9 +192,17 @@ $("modal").addEventListener("click",function(e){if(e.target.id=="modal")return f
   else if(b.id=="frm"){F.imagem_url="";dirty=true;foto()}
   else if(b.id=="cancelar"||b.id=="fechar")fechar()
   else if(b.id=="salvar")salvar()});
+function uploadTarget(f,target){if(!f||!f.type||!f.type.startsWith("image/"))return toast("Escolha um arquivo de imagem.",true);
+  enviar(f).then(function(u){if(!u)return;if(target==="main"){F.imagem_url=u;dirty=true;foto()}else if(target.indexOf("variant:")===0){var i=Number(target.slice(8));if(F.variantes[i]){F.variantes[i].imagem=u;dirty=true;cores()}}})}
 $("modal").addEventListener("change",function(e){var t=e.target,f=t.files&&t.files[0];if(!f)return;
-  if(t.id=="f_foto")enviar(f).then(function(u){if(u){F.imagem_url=u;dirty=true;foto()}t.value=""});
-  else if(t.dataset.k=="img"){var i=+t.closest(".cr").dataset.i;enviar(f).then(function(u){if(u){F.variantes[i].imagem=u;dirty=true;cores()}})}});
+  if(t.id=="f_foto"){uploadTarget(f,"main");t.value=""}
+  else if(t.dataset.k=="img"){var i=+t.closest(".cr").dataset.i;uploadTarget(f,"variant:"+i);t.value=""}});
+$("modal").addEventListener("click",function(e){var target=e.target.closest("[data-photo-target]");if(target){photoTarget=target.dataset.photoTarget;if(target.id==="fdrop"&&e.target.tagName!=="INPUT")$("f_foto").click()}});
+$("modal").addEventListener("keydown",function(e){var target=e.target.closest("[data-photo-target]");if(target&&(e.key==="Enter"||e.key===" ")){e.preventDefault();photoTarget=target.dataset.photoTarget;if(target.id==="fdrop")$("f_foto").click()}});
+$("modal").addEventListener("dragover",function(e){var target=e.target.closest("[data-photo-target]");if(!target)return;e.preventDefault();target.classList.add("over");photoTarget=target.dataset.photoTarget});
+$("modal").addEventListener("dragleave",function(e){var target=e.target.closest("[data-photo-target]");if(target&&!target.contains(e.relatedTarget))target.classList.remove("over")});
+$("modal").addEventListener("drop",function(e){var target=e.target.closest("[data-photo-target]");if(!target)return;e.preventDefault();target.classList.remove("over");var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)uploadTarget(f,target.dataset.photoTarget)});
+document.addEventListener("paste",function(e){if($("modal").hidden)return;var items=e.clipboardData&&e.clipboardData.items;if(!items)return;for(var i=0;i<items.length;i++){if(items[i].type&&items[i].type.startsWith("image/")){var f=items[i].getAsFile();if(f){e.preventDefault();uploadTarget(f,photoTarget);return}}}});
 function reduzir(f){return new Promise(function(ok,no){var im=new Image(),u=URL.createObjectURL(f);im.onload=function(){var k=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",.82))};im.onerror=no;im.src=u})}
 function enviar(f){toast("Enviando foto...");return reduzir(f).then(function(d){return api("/api/imagens","POST",{dados:d})}).then(function(r){if(!r.url)throw 0;toast("Foto enviada");return r.url}).catch(function(){toast("Não foi possível enviar a foto",true);return null})}
 function erro(id,m){toast(m,true);var e=$(id);e.classList.add("bad");e.focus();e.oninput=function(){e.classList.remove("bad")}}

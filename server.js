@@ -534,19 +534,19 @@ const colorTableReady = db.query(`
   await db.query(`
     INSERT INTO cores_catalogo (nome,nome_normalizado,hex)
     SELECT DISTINCT ON (lower(btrim(item->>'cor')))
-      btrim(item->>'cor'),
-      lower(btrim(item->>'cor')),
+      btrim(cores_item.item->>'cor'),
+      lower(btrim(cores_item.item->>'cor')),
       CASE
-        WHEN btrim(COALESCE(item->>'hex','')) ~ '^#[0-9A-Fa-f]{6}$'
-        THEN upper(btrim(item->>'hex'))
+        WHEN btrim(COALESCE(cores_item.item->>'hex','')) ~ '^#[0-9A-Fa-f]{6}$'
+        THEN upper(btrim(cores_item.item->>'hex'))
         ELSE '#CCCCCC'
       END
     FROM produtos p
     CROSS JOIN LATERAL jsonb_array_elements(
       CASE WHEN jsonb_typeof(p.variantes)='array' THEN p.variantes ELSE '[]'::jsonb END
-    ) item
-    WHERE btrim(COALESCE(item->>'cor','')) <> ''
-    ORDER BY lower(btrim(item->>'cor')), p.id
+    ) WITH ORDINALITY AS cores_item(item,ord)
+    WHERE btrim(COALESCE(cores_item.item->>'cor','')) <> ''
+    ORDER BY lower(btrim(cores_item.item->>'cor')), p.id, cores_item.ord
     ON CONFLICT (nome_normalizado) DO NOTHING
   `);
   return true;

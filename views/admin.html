@@ -245,7 +245,7 @@ function salvar(){
   api(novo?"/api/produtos":"/api/produtos/"+F.id,novo?"POST":"PUT",payload(F,{variantes:vs,preco_antigo:F.preco_antigo||null,imagem_url:F.imagem_url||null})).then(function(d){
     if(d.erro){if(d.erro!="auth"&&d.erro!="rede")toast(d.erro,true);return}
     var produto=d,id=novo?Number(d.id):F.id;
-    return api("/api/admin/cores","POST",{cores:vs}).then(function(lista){
+    return api("/api/admin/cores","POST",{cores:vs.map(function(v){return{nome:v.cor,hex:v.hex}})}).then(function(lista){
       if(!Array.isArray(lista))throw Error(lista.erro||"Não foi possível salvar a biblioteca de cores.");
       CORES=lista;sugestoes();
       if(novo)return produto;

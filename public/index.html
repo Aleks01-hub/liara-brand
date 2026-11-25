@@ -304,10 +304,31 @@ function checkout(){
     itens:cart.map(function(i){return{id:i.id,c:i.c,z:i.z,q:i.q}})
   })}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.erro||"Não foi possível registrar o pedido.");return d})})
   .then(function(pedido){
-    var mensagem="Olá! Fiz um pedido pelo catálogo da LIARA BRAND.\\n\\nPedido: "+pedido.codigo+"\\n\\n";
-    cart.forEach(function(i){mensagem+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+"\\n"});
-    mensagem+="\\nTotal confirmado pelo sistema: "+brl(Number(pedido.total))+"\\n\\nNome: "+document.getElementById("cn").value.trim()+"\\nEndereço: "+document.getElementById("ca").value.trim()+"\\nPagamento: "+pagamento;
-    if(pagamento==="Dinheiro"){mensagem+="\\nPrecisa de troco: "+precisaTroco;if(precisaTroco==="Sim")mensagem+="\\nTroco para: "+brl(valorTroco)}
+    var linhasMensagem=[
+      "Olá! Fiz um pedido pelo catálogo da LIARA BRAND.",
+      "",
+      "🛍️ *Pedido: "+pedido.codigo+"*",
+      "",
+      "*Itens do pedido*"
+    ];
+    cart.forEach(function(i){
+      linhasMensagem.push("• "+i.q+"x "+i.n);
+      linhasMensagem.push("  Cor: "+i.c+" | Tamanho: "+i.z);
+    });
+    linhasMensagem.push(
+      "",
+      "💰 *Total: "+brl(Number(pedido.total))+"*",
+      "",
+      "*Dados para entrega*",
+      "Nome: "+document.getElementById("cn").value.trim(),
+      "Endereço: "+document.getElementById("ca").value.trim(),
+      "Pagamento: "+pagamento
+    );
+    if(pagamento==="Dinheiro"){
+      linhasMensagem.push("Precisa de troco: "+precisaTroco);
+      if(precisaTroco==="Sim")linhasMensagem.push("Troco para: "+brl(valorTroco));
+    }
+    var mensagem=linhasMensagem.join("\n");
     var destino="https://wa.me/"+WA+"?text="+encodeURIComponent(mensagem);
     if(janela&&!janela.closed)janela.location.href=destino;else window.location.href=destino;
     cart=[];upd();document.getElementById("drawer").classList.remove("open");

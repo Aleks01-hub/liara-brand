@@ -74,10 +74,10 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .stock-flag{position:absolute;z-index:3;left:0;right:0;bottom:0;background:#c62828;color:#fff;text-align:center;font-size:12px;font-weight:800;letter-spacing:.04em;padding:7px 10px;border-radius:0 0 14px 14px;box-shadow:0 -2px 8px rgba(0,0,0,.18)}
 .stock-flag[hidden]{display:none}
 /* Variantes esgotadas: aparência suave e tracejada, mas continuam selecionáveis */
-.sw.sold-out{opacity:.38;border:2px dashed #aeb8c5;filter:grayscale(.65);cursor:pointer}
-.sz.sold-out{opacity:.42;border:1.5px dashed var(--mute);color:var(--mute);background:transparent;filter:grayscale(.55);cursor:pointer}
-.sw.sold-out[aria-pressed="true"]{opacity:.62;outline:3px solid #fff;outline-offset:3px;border-style:dashed}
-.sz.sold-out[aria-pressed="true"]{opacity:.68;color:var(--accink);background:var(--acc);border:2px dashed #fff;box-shadow:0 0 0 2px rgba(31,47,70,.85)}
+.sw.sold-out{opacity:.38;border:2px dashed #1f2f46;filter:grayscale(.65);cursor:pointer}
+.sz.sold-out{opacity:.42;border:1.5px dashed #1f2f46;color:var(--mute);background:transparent;filter:grayscale(.55);cursor:pointer}
+.sw.sold-out[aria-pressed="true"]{opacity:.62;outline:3px solid #fff;outline-offset:3px;border:2px dashed #1f2f46}
+.sz.sold-out[aria-pressed="true"]{opacity:.68;color:var(--accink);background:var(--acc);border:2px dashed #1f2f46;box-shadow:0 0 0 2px rgba(31,47,70,.85)}
 
 
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}

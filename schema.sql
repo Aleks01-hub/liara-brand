@@ -19,8 +19,10 @@ CREATE TABLE IF NOT EXISTS produtos (
   tamanhos         TEXT[]        NOT NULL DEFAULT '{}',   -- {PP,P,M}
   em_estoque       BOOLEAN       NOT NULL DEFAULT TRUE,
   destaque         BOOLEAN       NOT NULL DEFAULT FALSE,
+  visivel_catalogo BOOLEAN       NOT NULL DEFAULT TRUE,
   data_atualizacao TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS visivel_catalogo BOOLEAN NOT NULL DEFAULT TRUE;
 
 
 -- Cupons promocionais administrados pelo painel da Liara.

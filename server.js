@@ -214,6 +214,9 @@ const ordersTableReady = couponTableReady.then(() => db.query(`
   );
   CREATE INDEX IF NOT EXISTS idx_pedidos_status_criado ON pedidos(status, criado_em DESC);
   ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS estoque_reservado BOOLEAN NOT NULL DEFAULT FALSE;
+  ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now();
+  ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS confirmado_em TIMESTAMPTZ;
+  ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cancelado_em TIMESTAMPTZ;
   CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON pedidos(codigo);
   CREATE TABLE IF NOT EXISTS pedido_itens (
     id BIGSERIAL PRIMARY KEY,
@@ -742,7 +745,7 @@ app.put("/api/produtos/:id", auth, ah(async (req, res) => {
   await catalogVisibilityReady;
   const v = campos(req.body || {});
   if (!v) return res.status(400).json({ erro: "Nome e preço válido são obrigatórios" });
-  const sets = COLS.split(",").map((c, i) => `${c}=${i + 1}`).join(",");
+  const sets = COLS.split(",").map((c, i) => c + "=$" + (i + 1)).join(",");
   const result = await db.query(
     `UPDATE produtos SET ${sets}, data_atualizacao=now() WHERE id=$13 RETURNING *`,
     [...v, Number(req.params.id)]

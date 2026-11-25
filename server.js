@@ -474,7 +474,7 @@ app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
       }
     }
     const result = await client.query(
-      "UPDATE pedidos SET status=$1,estoque_reservado=FALSE,atualizado_em=now(),confirmado_em=CASE WHEN $1='confirmado' THEN now() ELSE confirmado_em END,cancelado_em=CASE WHEN $1='cancelado' THEN now() ELSE cancelado_em END WHERE id=$2 RETURNING *",
+      "UPDATE pedidos SET status=$1::varchar,estoque_reservado=FALSE,atualizado_em=now(),confirmado_em=CASE WHEN $1::varchar='confirmado' THEN now() ELSE confirmado_em END,cancelado_em=CASE WHEN $1::varchar='cancelado' THEN now() ELSE cancelado_em END WHERE id=$2 RETURNING *",
       [status,id]
     );
     await client.query("COMMIT");

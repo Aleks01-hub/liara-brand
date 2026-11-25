@@ -145,7 +145,7 @@ function sair(exp){T=null;localStorage.removeItem("tk");mostrar();if(exp)toast("
 function entrar(){var u=$("u").value.trim(),s=$("s").value;if(!u||!s)return toast("Digite usuário e senha",true);$("entrar").disabled=true;
   fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario:u,senha:s})}).then(function(r){return r.json()}).then(function(d){if(d.token){T=d.token;localStorage.setItem("tk",T);$("s").value="";mostrar()}else toast(d.erro||"Falha no login",true)}).catch(function(){toast("Sem conexão",true)}).then(function(){$("entrar").disabled=false})}
 $("entrar").onclick=entrar;$("s").onkeydown=function(e){if(e.key=="Enter")entrar()};$("sair").onclick=function(){sair()};
-function cats(){return L.map(function(p){return p.categoria}).filter(function(c,i,a){return c&&a.indexOf(c)==i}).sort()}
+function cats(){var a=L.map(function(p){return p.categoria}).filter(function(c,i,a){return c&&a.indexOf(c)==i});if(a.indexOf("Acessórios")<0)a.push("Acessórios");return a.sort()}
 function listar(){api("/api/admin/produtos").then(function(d){if(!Array.isArray(d))return;L=d;
   var v=$("fcat").value;$("fcat").innerHTML='<option value="">Todas as categorias</option>'+cats().map(function(c){return "<option>"+esc(c)+"</option>"}).join("");$("fcat").value=v;
   $("cats").innerHTML=cats().map(function(c){return '<option value="'+esc(c)+'">'}).join("");render()})}

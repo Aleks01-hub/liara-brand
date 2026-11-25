@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Clientes · LIARA BRAND</title>
+<style>
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#fff;--soft:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--ai:#fffaf0;--ok:#2f8f6b;--bad:#b3392f}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--soft:#34476a;--line:#3a4d6b;--acc:#fffaf0;--ai:#1f2f46;--ok:#4cb48b;--bad:#e5766c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea{font:inherit;color:inherit}button{cursor:pointer}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:12px 16px}.bar b{font:700 20px Georgia,serif;letter-spacing:.04em}.bar nav{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bar a{color:var(--acc);font-weight:700;text-decoration:none;white-space:nowrap}
+main{max-width:1100px;margin:auto;padding:18px 16px 50px}.muted{color:var(--mute);font-size:13px}h1{margin:0 0 4px;font-size:26px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.toolbar input{flex:1;min-width:200px}
+input,textarea{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}.btn{border:0;border-radius:10px;padding:10px 15px;font-weight:700;background:var(--acc);color:var(--ai)}.btn.alt{background:none;color:var(--acc);border:1.5px solid var(--acc)}.btn:disabled{opacity:.55}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.client{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.client h2{margin:0 0 4px;font-size:18px}.meta{font-size:13px;color:var(--mute);margin:4px 0}.stats{display:flex;gap:16px;flex-wrap:wrap;margin:10px 0}.stats b{font-size:17px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:flex-end;justify-content:center;z-index:20}.modal[hidden]{display:none}.sheet{background:var(--bg);width:100%;max-width:650px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px}.sheet h2{margin:0 0 12px}.form{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:grid;gap:4px;font-size:13px;color:var(--mute)}.wide{grid-column:1/-1}.footer{display:flex;gap:8px;margin-top:14px}.footer button{flex:1}
+#history{margin-top:14px}.purchase{border-top:1px solid var(--line);padding:10px 0}.purchase h3{margin:0;font-size:15px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;z-index:30;max-width:92vw}#toast.on{opacity:1}
+@media(max-width:700px){.bar{flex-wrap:wrap}.bar nav{width:100%;margin-left:0}.form{grid-template-columns:1fr}.wide{grid-column:auto}.modal{align-items:flex-end}}
+</style></head>
+<body>
+<header class="bar"><b>LIARA <span style="font-weight:400">Clientes</span></b><nav><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/admin/clientes">Clientes</a><a href="/" target="_blank" rel="noopener">Ver site</a><button class="btn alt" id="logout">Sair</button></nav></header>
+<main><h1>Cadastro de clientes</h1><p class="muted">Centralize contatos, aniversários, endereços, observações e histórico de compras.</p>
+<div class="toolbar"><input id="search" type="search" placeholder="Buscar por nome ou telefone"><button class="btn" id="new">Novo cliente</button><button class="btn alt" id="refresh">Atualizar</button></div>
+<div id="list" class="grid"><p class="muted">Carregando clientes...</p></div>
+<section id="history" hidden></section>
+</main>
+<div class="modal" id="modal" hidden><div class="sheet"><h2 id="formTitle">Novo cliente</h2><form id="form" class="form">
+<label class="field wide">Nome completo *<input id="name" maxlength="120" required></label>
+<label class="field">Telefone<input id="phone" maxlength="30" placeholder="(00) 00000-0000"></label>
+<label class="field">Aniversário<input id="birthday" type="date"></label>
+<label class="field wide">Endereço<textarea id="address" rows="2" maxlength="1000"></textarea></label>
+<label class="field wide">Observações<textarea id="notes" rows="3" maxlength="2000" placeholder="Preferências, informações importantes..."></textarea></label>
+<div class="footer wide"><button type="button" class="btn alt" id="cancel">Cancelar</button><button class="btn" id="save">Salvar cliente</button></div>
+</form></div></div><div id="toast" role="status"></div>
+<script>
+var token=localStorage.getItem("tk"),clients=[],editing=null,$=function(id){return document.getElementById(id)};
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function money(v){return "R$ "+Number(v||0).toFixed(2).replace(".",",")}
+function toast(v){$("toast").textContent=v;$("toast").className="on";clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").className=""},2800)}
+function api(url,method,data){return fetch(url,{method:method||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:data?JSON.stringify(data):undefined}).then(function(r){return r.json().then(function(d){if(!r.ok)throw Error(d.erro||"Não foi possível concluir.");return d})}).catch(function(e){if(e.message==="Não autorizado"){localStorage.removeItem("tk");location.href="/admin";return}throw e})}
+function load(){api("/api/admin/clientes").then(function(d){clients=d;render()}).catch(function(e){$("list").textContent=e.message;toast(e.message)})}
+function render(){var q=$("search").value.trim().toLowerCase();var rows=clients.filter(function(c){return(c.nome+" "+(c.telefone||"")).toLowerCase().includes(q)});$("list").innerHTML=rows.map(function(c){return '<article class="client" data-id="'+c.id+'"><h2>'+esc(c.nome)+'</h2><div class="meta">'+esc(c.telefone||"Telefone não informado")+'</div><div class="meta">Aniversário: '+(c.aniversario?new Date(c.aniversario+"T00:00:00").toLocaleDateString("pt-BR"):"Não informado")+'</div><div class="meta">'+esc(c.endereco||"Endereço não informado")+'</div><div class="stats"><span><b>'+Number(c.total_pedidos||0)+'</b> compras</span><span><b>'+money(c.total_compras)+'</b> em vendas</span></div><div class="meta">Última compra: '+(c.ultima_compra?new Date(c.ultima_compra).toLocaleDateString("pt-BR"):"Sem compras registradas")+'</div><div class="actions"><button class="btn alt" data-edit>Editar</button><button class="btn" data-history>Ver compras</button></div></article>'}).join("")||'<p class="muted">Nenhum cliente cadastrado.</p>'}
+function openForm(c){editing=c||null;$("formTitle").textContent=c?"Editar cliente":"Novo cliente";$("name").value=c?.nome||"";$("phone").value=c?.telefone||"";$("birthday").value=c?.aniversario?String(c.aniversario).slice(0,10):"";$("address").value=c?.endereco||"";$("notes").value=c?.observacoes||"";$("modal").hidden=false;$("name").focus()}
+function closeForm(){$("modal").hidden=true}
+$("form").onsubmit=function(e){e.preventDefault();var data={nome:$("name").value,telefone:$("phone").value,aniversario:$("birthday").value||null,endereco:$("address").value,observacoes:$("notes").value};var b=$("save");b.disabled=true;api(editing?"/api/admin/clientes/"+editing.id:"/api/admin/clientes",editing?"PUT":"POST",data).then(function(){toast(editing?"Cliente atualizado.":"Cliente cadastrado.");closeForm();load()}).catch(function(e){toast(e.message)}).finally(function(){b.disabled=false})};
+$("list").addEventListener("click",function(e){var card=e.target.closest("[data-id]");if(!card)return;var c=clients.find(function(x){return Number(x.id)===Number(card.dataset.id)});if(e.target.closest("[data-edit]"))openForm(c);if(e.target.closest("[data-history]"))showHistory(c)});
+function showHistory(c){$("history").hidden=false;$("history").innerHTML="<h2>Compras de "+esc(c.nome)+"</h2><p class='muted'>Carregando histórico...</p>";api("/api/admin/clientes/"+c.id+"/compras").then(function(rows){$("history").innerHTML="<h2>Compras de "+esc(c.nome)+"</h2>"+(rows.map(function(p){var items=(p.itens||[]).map(function(i){return "<p>"+i.quantidade+"x "+esc(i.nome)+" · "+esc(i.cor)+" · "+esc(i.tamanho)+" — "+money(i.subtotal)+"</p>"}).join("");return '<article class="purchase"><h3>'+esc(p.codigo)+' · '+money(p.total)+'</h3><div class="meta">'+new Date(p.criado_em).toLocaleString("pt-BR")+' · '+esc(p.status)+' · '+esc(p.forma_pagamento)+'</div>'+items+'</article>'}).join("")||'<p class="muted">Ainda não há compras associadas a este nome.</p>')});$("history").scrollIntoView({behavior:"smooth",block:"start"})}
+$("new").onclick=function(){openForm()};$("cancel").onclick=closeForm;$("refresh").onclick=load;$("search").oninput=render;$("logout").onclick=function(){localStorage.removeItem("tk");location.href="/admin"};
+if(!token)location.href="/admin";else load();
+</script></body></html>

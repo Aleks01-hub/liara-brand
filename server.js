@@ -533,7 +533,7 @@ const colorTableReady = db.query(`
   // Importa todas as cores existentes nos produtos e ignora nomes duplicados.
   await db.query(`
     INSERT INTO cores_catalogo (nome,nome_normalizado,hex)
-    SELECT DISTINCT ON (lower(btrim(item->>'cor')))
+    SELECT DISTINCT ON (lower(btrim(cores_item.item->>'cor')))
       btrim(cores_item.item->>'cor'),
       lower(btrim(cores_item.item->>'cor')),
       CASE

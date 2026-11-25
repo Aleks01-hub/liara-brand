@@ -145,6 +145,7 @@ html,body{max-width:100%;overflow-x:clip}
   <div class="strip" id="strip"></div></section>
 <section class="sec" id="feminino"><h2>Feminino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gF"></div></section>
 <section class="sec" id="masculino"><h2>Masculino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gM"></div></section>
+<section class="sec" id="acessorios" hidden><h2>Acessórios</h2><p>Complete seu visual com acessórios femininos e masculinos.</p><div id="ac-f" hidden><h3>Feminino</h3><div class="grid" id="gAF"></div></div><div id="ac-m" hidden><h3>Masculino</h3><div class="grid" id="gAM"></div></div></section>
 <div class="sec empty" id="none" hidden>Nenhuma peça encontrada. Tente outra categoria ou palavra.</div>
 <section class="perks" id="perks"></section>
 </main>
@@ -224,16 +225,23 @@ function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(
 function ok(p){
   var t=qs&&p.n.toLowerCase().indexOf(qs)<0?false:true;if(!t)return false;
   if(fz&&p.z.indexOf(fz)<0)return false;if(fcol&&p.c.indexOf(fcol)<0)return false;if(fpr&&p.p>+fpr)return false;
-  if(cat=="all")return true;if(cat=="F"||cat=="M")return p.s==cat;if(cat=="ofertas")return !!p.o;return p.k==cat;
+  if(cat=="all")return true;if(cat=="F"||cat=="M")return p.s==cat;if(cat=="accessories")return p.a;if(cat=="ofertas")return !!p.o;return p.k==cat;
 }
 function render(){
   document.getElementById("strip").innerHTML=P.filter(function(p){return p.r}).sort(function(a,b){return a.r-b.r}).map(fc).join("");
   var n=0;
   ["F","M"].forEach(function(s){
-    var l=P.filter(function(p){return p.s==s&&ok(p)});n+=l.length;
+    var l=P.filter(function(p){return p.s==s&&!p.a&&ok(p)});n+=l.length;
     document.getElementById("g"+s).innerHTML=l.map(card).join("");
     document.getElementById(s=="F"?"feminino":"masculino").hidden=!l.length;
   });
+  ["F","M"].forEach(function(s){
+    var l=P.filter(function(p){return p.s==s&&p.a&&ok(p)});n+=l.length;
+    var box=document.getElementById(s=="F"?"ac-f":"ac-m");
+    document.getElementById(s=="F"?"gAF":"gAM").innerHTML=l.map(card).join("");
+    box.hidden=!l.length;
+  });
+  document.getElementById("acessorios").hidden=document.getElementById("ac-f").hidden&&document.getElementById("ac-m").hidden;
   var nn=document.getElementById("none");nn.textContent="Nenhuma peça encontrada. Tente outra categoria ou palavra.";nn.hidden=n>0;bubs();
   document.getElementById("destaques").hidden=!document.getElementById("strip").children.length;
   fades();
@@ -364,10 +372,10 @@ function carregar(){
       var stock=Array.isArray(d.estoque_variantes)?d.estoque_variantes:[];
       var totalStock=stock.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0);
       var disponivel=!!d.em_estoque&&totalStock>0;
-      return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:disponivel,stock:stock,
+      return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,a:k==="acessorios"||k==="acessorio",n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:disponivel,stock:stock,
         tag:disponivel?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
     });
-    CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["ofertas","Ofertas","%"]]);
+    CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).filter(function(k){return k!=="acessorios"&&k!=="acessorio"}).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["accessories","Acessórios","✦"],["ofertas","Ofertas","%"]]);
     reconciliar();popularFiltros();render();irHash();
   }).catch(function(){clearTimeout(lento);["strip","gF","gM"].forEach(function(i){document.getElementById(i).innerHTML=""});var n=document.getElementById("none");n.innerHTML='Não foi possível carregar os produtos agora. <button class="btn" id="retry">Tentar de novo</button>';n.hidden=false});
 }

@@ -85,7 +85,7 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
     <input id="busca" type="search" placeholder="Buscar produto ou categoria" aria-label="Buscar">
     <select id="fsec" aria-label="Seção"><option value="">Todas as seções</option><option>Feminino</option><option>Masculino</option></select>
     <select id="fcat" aria-label="Categoria"></select>
-    <select id="fst" aria-label="Status"><option value="">Todos os status</option><option value="1">Em estoque</option><option value="0">Esgotados</option><option value="d">Destaques</option></select>
+    <select id="fst" aria-label="Status"><option value="">Todos os status</option><option value="1">Em estoque</option><option value="0">Esgotados</option><option value="d">Destaques</option><option value="h">Ocultos do catálogo</option></select>
     <select id="ord" aria-label="Ordenar"><option value="rec">Mais recentes</option><option value="nome">Nome (A-Z)</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select>
     <button class="btn" id="novo">+ Novo produto</button>
   </div>
@@ -123,7 +123,7 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
     </fieldset>
     <fieldset><legend>6 · Disponibilidade</legend>
       <label class="sw"><input type="checkbox" id="f_est"><i></i><span>Em estoque</span></label>
-      <label class="sw"><input type="checkbox" id="f_dest"><i></i><span>Destaque na página inicial</span></label>
+      <label class="sw"><input type="checkbox" id="f_dest"><i></i><span>Destaque na página inicial</span></label><p class="mt" style="margin:0">Para ocultar um produto do catálogo sem excluí-lo, use o botão “Ocultar do catálogo” na lista de produtos.</p>
     </fieldset>
   </div>
   <div class="ft"><button class="btn g" id="cancelar">Cancelar</button><button class="btn" id="salvar">Salvar produto</button></div>
@@ -143,30 +143,30 @@ function entrar(){var u=$("u").value.trim(),s=$("s").value;if(!u||!s)return toas
   fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario:u,senha:s})}).then(function(r){return r.json()}).then(function(d){if(d.token){T=d.token;localStorage.setItem("tk",T);$("s").value="";mostrar()}else toast(d.erro||"Falha no login",true)}).catch(function(){toast("Sem conexão",true)}).then(function(){$("entrar").disabled=false})}
 $("entrar").onclick=entrar;$("s").onkeydown=function(e){if(e.key=="Enter")entrar()};$("sair").onclick=function(){sair()};
 function cats(){return L.map(function(p){return p.categoria}).filter(function(c,i,a){return c&&a.indexOf(c)==i}).sort()}
-function listar(){api("/api/produtos").then(function(d){if(!Array.isArray(d))return;L=d;
+function listar(){api("/api/admin/produtos").then(function(d){if(!Array.isArray(d))return;L=d;
   var v=$("fcat").value;$("fcat").innerHTML='<option value="">Todas as categorias</option>'+cats().map(function(c){return "<option>"+esc(c)+"</option>"}).join("");$("fcat").value=v;
   $("cats").innerHTML=cats().map(function(c){return '<option value="'+esc(c)+'">'}).join("");render()})}
 function render(){
   var n=L.length,e=L.filter(function(p){return p.em_estoque}).length;
   $("stats").innerHTML=[["Produtos",n],["Em estoque",e],["Esgotados",n-e],["Destaques",L.filter(function(p){return p.destaque}).length]].map(function(x){return "<div><b>"+x[1]+"</b><span>"+x[0]+"</span></div>"}).join("");
   var q=$("busca").value.trim().toLowerCase(),s=$("fsec").value,c=$("fcat").value,st=$("fst").value,o=$("ord").value;
-  var r=L.filter(function(p){return(!q||(p.nome+" "+p.categoria).toLowerCase().indexOf(q)>=0)&&(!s||p.genero==s)&&(!c||p.categoria==c)&&(st===""||(st=="1"?p.em_estoque:st=="0"?!p.em_estoque:p.destaque))});
+  var r=L.filter(function(p){return(!q||(p.nome+" "+p.categoria).toLowerCase().indexOf(q)>=0)&&(!s||p.genero==s)&&(!c||p.categoria==c)&&(st===""||(st=="1"?p.em_estoque:st=="0"?!p.em_estoque:st=="d"?p.destaque:p.visivel_catalogo===false))});
   r.sort(o=="nome"?function(a,b){return a.nome.localeCompare(b.nome)}:o=="menor"?function(a,b){return a.preco-b.preco}:o=="maior"?function(a,b){return b.preco-a.preco}:function(a,b){return new Date(b.data_atualizacao)-new Date(a.data_atualizacao)});
   $("lista").innerHTML=r.map(function(p){var vs=p.variantes||[],im=p.imagem_url||(vs.filter(function(v){return v.imagem})[0]||{}).imagem,of=+p.preco_antigo>+p.preco;
-    return '<article class="p'+(p.em_estoque?"":" off")+'" data-id="'+p.id+'"><div class="th">'+(im?'<img src="'+esc(im)+'" alt="">':"sem foto")+'</div><div class="in"><b>'+esc(p.nome)+'</b><div class="mt">'+esc(p.genero)+" · "+esc(p.categoria)+'</div><div class="pr"><b>'+brl(p.preco)+"</b>"+(of?"<s>"+brl(p.preco_antigo)+'</s><span class="of">-'+Math.round((1-p.preco/p.preco_antigo)*100)+"%</span>":"")+'</div><div>'+vs.map(function(v){return '<i class="dot" title="'+esc(v.cor)+'" style="background:'+esc(v.hex||"#ccc")+'"></i>'}).join("")+'</div><div class="mt">Tamanhos: '+esc((p.tamanhos||[]).join(", ")||"—")+'</div></div><div class="ac"><label class="sw"><input type="checkbox" data-st'+(p.em_estoque?" checked":"")+'><i></i><span>'+(p.em_estoque?"Em estoque":"Esgotado")+'</span></label><button data-dest class="'+(p.destaque?"on":"")+'">★ Destaque</button><button data-ed>Editar</button><button data-dup>Duplicar</button><button data-del class="d">Excluir</button></div></article>'}).join("")||'<div class="vazio">Nenhum produto encontrado.</div>'}
+    return '<article class="p'+(p.em_estoque?"":" off")+'" data-id="'+p.id+'"><div class="th">'+(im?'<img src="'+esc(im)+'" alt="">':"sem foto")+'</div><div class="in"><b>'+esc(p.nome)+'</b>'+(p.visivel_catalogo===false?'<div class="mt" style="color:var(--bad);font-weight:700">Oculto do catálogo</div>':'')+'<div class="mt">'+esc(p.genero)+" · "+esc(p.categoria)+'</div><div class="pr"><b>'+brl(p.preco)+"</b>"+(of?"<s>"+brl(p.preco_antigo)+'</s><span class="of">-'+Math.round((1-p.preco/p.preco_antigo)*100)+"%</span>":"")+'</div><div>'+vs.map(function(v){return '<i class="dot" title="'+esc(v.cor)+'" style="background:'+esc(v.hex||"#ccc")+'"></i>'}).join("")+'</div><div class="mt">Tamanhos: '+esc((p.tamanhos||[]).join(", ")||"—")+'</div></div><div class="ac"><label class="sw"><input type="checkbox" data-st'+(p.em_estoque?" checked":"")+'><i></i><span>'+(p.em_estoque?"Em estoque":"Esgotado")+'</span></label><button data-dest class="'+(p.destaque?"on":"")+'">★ Destaque</button><button data-catvis>'+(p.visivel_catalogo===false?"Mostrar no catálogo":"Ocultar do catálogo")+'</button><button data-ed>Editar</button><button data-dup>Duplicar</button><button data-del class="d">Excluir</button></div></article>'}).join("")||'<div class="vazio">Nenhum produto encontrado.</div>'}
 ["busca","fsec","fcat","fst","ord"].forEach(function(i){$(i).oninput=render});
-function payload(p,o){return Object.assign({nome:p.nome,descricao:p.descricao,preco:p.preco,preco_antigo:p.preco_antigo,imagem_url:p.imagem_url,categoria:p.categoria,genero:p.genero,variantes:p.variantes,tamanhos:p.tamanhos,em_estoque:p.em_estoque,destaque:p.destaque},o||{})}
+function payload(p,o){return Object.assign({nome:p.nome,descricao:p.descricao,preco:p.preco,preco_antigo:p.preco_antigo,imagem_url:p.imagem_url,categoria:p.categoria,genero:p.genero,variantes:p.variantes,tamanhos:p.tamanhos,em_estoque:p.em_estoque,destaque:p.destaque,visivel_catalogo:p.visivel_catalogo!==false},o||{})}
 function achar(el){var c=el.closest(".p");return L.filter(function(x){return x.id==c.dataset.id})[0]}
 $("lista").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var p=achar(b);
   if(b.dataset.ed!==undefined)abrir(p);
   else if(b.dataset.dup!==undefined)api("/api/produtos","POST",payload(p,{nome:p.nome+" (cópia)",destaque:false})).then(function(d){if(!d.erro){toast("Produto duplicado");listar()}});
   else if(b.dataset.del!==undefined){if(confirm('Excluir "'+p.nome+'"? Essa ação não pode ser desfeita.'))api("/api/produtos/"+p.id,"DELETE").then(function(d){if(!d.erro){toast("Produto excluído");listar()}})}
-  else if(b.dataset.dest!==undefined)api("/api/produtos/"+p.id,"PUT",payload(p,{destaque:!p.destaque})).then(function(d){if(!d.erro){toast(p.destaque?"Removido dos destaques":"Adicionado aos destaques");listar()}})});
+  else if(b.dataset.dest!==undefined)api("/api/produtos/"+p.id,"PUT",payload(p,{destaque:!p.destaque})).then(function(d){if(!d.erro){toast(p.destaque?"Removido dos destaques":"Adicionado aos destaques");listar()}});else if(b.dataset.catvis!==undefined)api("/api/admin/produtos/"+p.id+"/catalogo","PATCH",{visivel_catalogo:p.visivel_catalogo===false}).then(function(d){if(!d.erro){toast(p.visivel_catalogo===false?"Produto voltou ao catálogo":"Produto ocultado do catálogo");listar()}})});
 $("lista").addEventListener("change",function(e){if(e.target.dataset.st===undefined)return;var p=achar(e.target);
   api("/api/produtos/"+p.id+"/estoque","PATCH",{em_estoque:e.target.checked}).then(function(d){if(d.erro){e.target.checked=!e.target.checked;return}toast(e.target.checked?"Marcado como em estoque":"Marcado como esgotado");listar()})});
 $("novo").onclick=function(){abrir()};
 /* ---------- formulário ---------- */
-function abrir(p){F=p?JSON.parse(JSON.stringify(p)):{genero:"Feminino",variantes:[],tamanhos:[],em_estoque:true,destaque:false};F.variantes=F.variantes||[];F.tamanhos=F.tamanhos||[];
+function abrir(p){F=p?JSON.parse(JSON.stringify(p)):{genero:"Feminino",variantes:[],tamanhos:[],em_estoque:true,destaque:false,visivel_catalogo:true};F.variantes=F.variantes||[];F.tamanhos=F.tamanhos||[];
   $("mt").textContent=p?"Editar produto":"Novo produto";
   $("f_nome").value=F.nome||"";$("f_desc").value=F.descricao||"";$("f_cat").value=F.categoria||"";$("f_preco").value=F.preco!=null?F.preco:"";$("f_antigo").value=F.preco_antigo||"";$("f_tam").value="";
   $("f_est").checked=F.em_estoque!==false;$("f_dest").checked=!!F.destaque;

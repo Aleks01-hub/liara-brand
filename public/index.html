@@ -181,7 +181,7 @@ body:"M34 8L28 24L36 40L30 62L38 96H62L70 62L64 40L72 24L66 8Q50 20 34 8Z"};
 var C={};
 var SF=["PP","P","M","G","GG"],SM=["P","M","G","GG"];
 var P=[];
-var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body"};
+var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body",acessorios:"body",acessorio:"body"};
 /* TEXTOS DA LOJA: edite aqui. Deixe promo vazio ("") para esconder a faixa do topo. */
 var LOJA={promo:"Faça seu pedido pelo WhatsApp",vantagens:[["Peça pelo WhatsApp","Monte a sacola e envie o pedido em um toque."],["Pix, cartão ou dinheiro","Escolha a forma de pagamento ao finalizar."],["Cores e tamanhos","Escolha a cor e o tamanho de cada peça."],["Destaques","Confira as peças em destaque."]]};
 function lerSacola(){try{var a=JSON.parse(localStorage.getItem("liara_sacola")||"[]");return Array.isArray(a)?a.filter(function(i){return i&&i.n&&i.q>0&&+i.p>=0}):[]}catch(e){return[]}}

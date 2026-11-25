@@ -447,11 +447,26 @@ app.patch("/api/admin/pedidos/:id/status", auth, ah(async (req, res) => {
       const itens = await client.query("SELECT produto_id,produto_nome,cor,tamanho,quantidade FROM pedido_itens WHERE pedido_id=$1", [id]);
       for (const item of itens.rows) {
         if (!item.produto_id) continue;
-        const atual = await client.query(
-          "INSERT INTO estoque_variantes(produto_id,cor,tamanho,quantidade,atualizado_em) VALUES($1,$2,$3,$4,now()) ON CONFLICT(produto_id,cor,tamanho) DO UPDATE SET quantidade=estoque_variantes.quantidade+EXCLUDED.quantidade,atualizado_em=now() RETURNING quantidade",
-          [item.produto_id,item.cor,item.tamanho,item.quantidade]
+        // Compatibilidade com bancos antigos que ainda não possuem a restrição UNIQUE
+        // usada pelo ON CONFLICT. A transação do pedido mantém a reposição atômica.
+        const estoqueAtual = await client.query(
+          "SELECT id,quantidade FROM estoque_variantes WHERE produto_id=$1 AND cor=$2 AND tamanho=$3 ORDER BY id LIMIT 1 FOR UPDATE",
+          [item.produto_id,item.cor,item.tamanho]
         );
-        const nova = Number(atual.rows[0].quantidade);
+        let nova;
+        if (estoqueAtual.rows[0]) {
+          const atualizado = await client.query(
+            "UPDATE estoque_variantes SET quantidade=quantidade+$1,atualizado_em=now() WHERE id=$2 RETURNING quantidade",
+            [item.quantidade,estoqueAtual.rows[0].id]
+          );
+          nova = Number(atualizado.rows[0].quantidade);
+        } else {
+          const inserido = await client.query(
+            "INSERT INTO estoque_variantes(produto_id,cor,tamanho,quantidade,atualizado_em) VALUES($1,$2,$3,$4,now()) RETURNING quantidade",
+            [item.produto_id,item.cor,item.tamanho,item.quantidade]
+          );
+          nova = Number(inserido.rows[0].quantidade);
+        }
         await client.query(
           "INSERT INTO movimentacoes_estoque(produto_id,produto_nome,cor,tamanho,tipo,quantidade,quantidade_anterior,quantidade_nova,observacao) VALUES($1,$2,$3,$4,'entrada',$5,$6,$7,$8)",
           [item.produto_id,item.produto_nome,item.cor,item.tamanho,item.quantidade,nova-item.quantidade,nova,"Liberação de reserva do pedido "+pedido.codigo]

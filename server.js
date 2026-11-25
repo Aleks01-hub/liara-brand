@@ -269,15 +269,15 @@ app.post("/api/pedidos", ah(async (req, res) => {
   try {
     await client.query("BEGIN");
     const ids = [...new Set(normalizados.map((i) => i.id))];
-    const encontrados = await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque FROM produtos WHERE id = ANY($1::int[]) FOR UPDATE", [ids]);
+    const encontrados = await client.query("SELECT id,nome,preco,variantes,tamanhos,em_estoque,visivel_catalogo FROM produtos WHERE id = ANY($1::int[]) FOR UPDATE", [ids]);
     const produtos = new Map(encontrados.rows.map((p) => [Number(p.id), p]));
     let subtotal = 0;
     const linhas = [];
     for (const item of normalizados) {
       const p = produtos.get(item.id);
-      if (!p || !p.em_estoque) {
+      if (!p || !p.em_estoque || p.visivel_catalogo === false) {
         await client.query("ROLLBACK");
-        return res.status(409).json({ erro: "Um produto não está mais disponível. Atualize a página e confira a sacola." });
+        return res.status(409).json({ erro: "Um produto não está mais disponível no catálogo. Atualize a página e confira a sacola." });
       }
       const variantes = Array.isArray(p.variantes) && p.variantes.length ? p.variantes : [{ cor: "Único" }];
       const tamanhos = Array.isArray(p.tamanhos) && p.tamanhos.length ? p.tamanhos : ["Único"];

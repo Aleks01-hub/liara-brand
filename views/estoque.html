@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Estoque · LIARA BRAND</title>
+<style>
+:root{--bg:#fffaf0;--ink:#1f2f46;--mute:#5d6b80;--card:#fff;--soft:#f5eddb;--line:#e6dcc6;--acc:#1f2f46;--ai:#fffaf0;--ok:#2f8f6b;--bad:#b3392f}
+@media(prefers-color-scheme:dark){:root{--bg:#1f2f46;--ink:#fffaf0;--mute:#b4bfd0;--card:#2a3c57;--soft:#34476a;--line:#3a4d6b;--acc:#fffaf0;--ai:#1f2f46;--ok:#4cb48b;--bad:#e5766c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0))}
+.bar b{font-family:Georgia,serif;font-size:20px;letter-spacing:.04em}.bar b span{color:var(--acc);font-weight:400}
+.bar nav{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bar a{color:var(--acc);font-weight:700;text-decoration:none}
+main{max-width:980px;margin:auto;padding:16px}h1{font-size:26px;margin:0 0 4px}.muted{color:var(--mute);font-size:13px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+.panel h2{font-size:18px;margin:0 0 12px}
+input,select{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.field label{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wide{grid-column:1/-1}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-weight:700;background:var(--acc);color:var(--ai);display:inline-block;text-align:center}.btn.g,.btn.alt{background:none;color:var(--acc);border:1.5px solid var(--acc)}.btn.sm{padding:6px 10px;font-size:13px}.btn:disabled{opacity:.6;cursor:not-allowed}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.toolbar input{flex:1;min-width:180px}
+.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:650px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:13px}th{color:var(--mute)}
+.qty{font-weight:800;font-size:16px}.low{color:var(--bad)}.tag{font-size:11px;padding:3px 7px;border-radius:99px;background:var(--soft)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50;max-width:92vw;text-align:center}#toast.on{opacity:1}
+@media(max-width:700px){.form{grid-template-columns:1fr}.wide{grid-column:auto}.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%}}
+
+.bar nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.bar nav a{white-space:nowrap}
+@media(max-width:760px){.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%;gap:6px}.bar nav a,.bar nav button{font-size:13px;padding:7px 9px}}
+</style></head><body>
+<header class="bar"><b>LIARA <span>Estoque</span></b><nav><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/admin/clientes">Clientes</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn g sm" id="logout">Sair</button></nav></header>
+<main><h1>Controle de estoque</h1><p class="muted">Gerencie quantidades separadas por produto, cor e tamanho. Toda alteração gera um registro no histórico.</p>
+<section class="panel"><h2 style="margin:0 0 12px">Registrar movimentação</h2><form id="form" class="form">
+<div class="field wide"><label for="product">Produto</label><select id="product" required></select></div>
+<div class="field"><label for="color">Cor</label><select id="color" required></select></div><div class="field"><label for="size">Tamanho</label><select id="size" required></select></div>
+<div class="field"><label for="type">Movimentação</label><select id="type"><option value="entrada">Entrada (somar)</option><option value="saida">Saída (subtrair)</option><option value="ajuste">Ajuste (definir total)</option></select></div>
+<div class="field"><label for="quantity">Quantidade</label><input id="quantity" type="number" min="0" max="100000" step="1" required></div>
+<div class="field wide"><label for="note">Observação (opcional)</label><input id="note" maxlength="240" placeholder="Ex.: compra do fornecedor, contagem física..."></div>
+<div class="wide"><button class="btn" id="save">Salvar movimentação</button></div></form></section>
+<section class="panel"><h2 style="margin:0">Estoque atual</h2><div class="toolbar"><input id="search" placeholder="Buscar produto, cor ou tamanho"><button class="btn alt" id="refresh">Atualizar</button></div><div class="tablewrap"><table><thead><tr><th>Produto</th><th>Cor</th><th>Tamanho</th><th>Quantidade</th><th>Atualizado</th></tr></thead><tbody id="stock"><tr><td colspan="5">Carregando...</td></tr></tbody></table></div></section>
+<section class="panel"><h2 style="margin:0">Últimas movimentações</h2><div class="tablewrap"><table><thead><tr><th>Data</th><th>Produto</th><th>Variação</th><th>Tipo</th><th>Antes</th><th>Depois</th><th>Observação</th></tr></thead><tbody id="history"><tr><td colspan="7">Carregando...</td></tr></tbody></table></div></section></main><div id="toast" role="status"></div>
+<script>
+var token=localStorage.getItem("tk"),rows=[],products={},$=function(x){return document.getElementById(x)};
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function api(url,method,data){return fetch(url,{method:method||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},body:data?JSON.stringify(data):undefined}).then(function(r){return r.json().then(function(x){if(!r.ok)throw Error(x.erro||"Falha na solicitação");return x})})}
+function toast(t){$("toast").textContent=t;$("toast").className="on";setTimeout(function(){$("toast").className=""},2800)}
+function load(){Promise.all([api("/api/admin/estoque"),api("/api/admin/estoque/movimentacoes"),api("/api/admin/produtos")]).then(function(v){rows=v[0];products={};v[2].forEach(function(p){products[String(p.id)]=p});render();history(v[1]);populate()}).catch(function(e){toast(e.message);$("stock").innerHTML='<tr><td colspan="5">'+esc(e.message)+'</td></tr>'})}
+function productList(){return Object.keys(products).map(function(id){return products[id]})}
+function getVariants(p){var v=p&&p.variantes;if(typeof v==="string"){try{v=JSON.parse(v)}catch(e){v=[]}}return Array.isArray(v)&&v.length?v.map(function(x){return String((x&&x.cor)||"Único").trim()||"Único"}):["Único"]}
+function getSizes(p){var s=p&&p.tamanhos;if(typeof s==="string"){try{s=JSON.parse(s)}catch(e){s=s.split(",")}}return Array.isArray(s)&&s.length?s.map(function(x){return String(x).trim()}).filter(Boolean):["Único"]}
+function populate(){var ps=productList();$("product").innerHTML=ps.map(function(p){return'<option value="'+esc(p.id)+'">'+esc(p.nome)+'</option>'}).join("");variants()}
+function variants(){var p=products[String($("product").value)],colors=getVariants(p);$("color").innerHTML=colors.map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>'}).join("");sizes()}
+function sizes(){var p=products[String($("product").value)],c=$("color").value,all=getSizes(p);$("size").innerHTML=all.map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>'}).join("")}
+function render(){var q=$("search").value.toLowerCase();var rs=rows.filter(function(r){return(r.produto_nome+" "+r.cor+" "+r.tamanho).toLowerCase().includes(q)});$("stock").innerHTML=rs.map(function(r){return'<tr><td>'+esc(r.produto_nome)+'</td><td>'+esc(r.cor)+'</td><td>'+esc(r.tamanho)+'</td><td class="qty '+(Number(r.quantidade)===0?'low':'')+'">'+r.quantidade+'</td><td>'+ (r.atualizado_em?new Date(r.atualizado_em).toLocaleString("pt-BR"):"—")+'</td></tr>'}).join("")||'<tr><td colspan="5">Nenhum resultado.</td></tr>'}
+function history(rs){$("history").innerHTML=rs.map(function(m){return'<tr><td>'+new Date(m.criado_em).toLocaleString("pt-BR")+'</td><td>'+esc(m.produto_nome)+'</td><td>'+esc(m.cor)+' / '+esc(m.tamanho)+'</td><td><span class="tag">'+esc(m.tipo)+'</span></td><td>'+m.quantidade_anterior+'</td><td><b>'+m.quantidade_nova+'</b></td><td>'+esc(m.observacao||"—")+'</td></tr>'}).join("")||'<tr><td colspan="7">Sem movimentações.</td></tr>'}
+$("product").onchange=variants;$("color").onchange=sizes;$("search").oninput=render;$("refresh").onclick=load;$("logout").onclick=function(){localStorage.removeItem("tk");location.href="/admin"};
+$("form").onsubmit=function(e){e.preventDefault();var b=$("save");b.disabled=true;api("/api/admin/estoque/movimentacoes","POST",{produto_id:+$("product").value,cor:$("color").value,tamanho:$("size").value,tipo:$("type").value,quantidade:+$("quantity").value,observacao:$("note").value}).then(function(){toast("Estoque atualizado e histórico registrado.");$("quantity").value="";$("note").value="";load()}).catch(function(e){toast(e.message)}).finally(function(){b.disabled=false})};
+if(!token)location.href="/admin";else load();
+</script></body></html>

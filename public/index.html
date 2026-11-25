@@ -66,7 +66,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);padding:0}
 .sw[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
 .sz{min-width:36px;height:32px;border:1.5px solid var(--line);background:none;border-radius:8px;font-weight:700;font-size:13px}
-.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+.sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}.sz:disabled{opacity:.35;cursor:not-allowed;text-decoration:line-through}
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
 .out .pic{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
 .qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}
@@ -145,6 +145,7 @@ html,body{max-width:100%;overflow-x:clip}
   <div class="strip" id="strip"></div></section>
 <section class="sec" id="feminino"><h2>Feminino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gF"></div></section>
 <section class="sec" id="masculino"><h2>Masculino</h2><p>Escolha a cor e o tamanho de cada peça.</p><div class="grid" id="gM"></div></section>
+<section class="sec" id="acessorios" hidden><h2>Acessórios</h2><p>Complete seu visual com acessórios femininos e masculinos.</p><div id="ac-f" hidden><h3>Feminino</h3><div class="grid" id="gAF"></div></div><div id="ac-m" hidden><h3>Masculino</h3><div class="grid" id="gAM"></div></div></section>
 <div class="sec empty" id="none" hidden>Nenhuma peça encontrada. Tente outra categoria ou palavra.</div>
 <section class="perks" id="perks"></section>
 </main>
@@ -156,6 +157,8 @@ html,body{max-width:100%;overflow-x:clip}
     <label>Nome completo<input id="cn" autocomplete="name"></label>
     <label>Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
     <label>Forma de pagamento<select id="cp"><option value="">Escolha</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select></label>
+    <label id="trocoOp" hidden>Precisa de troco?<select id="ctn"><option value="">Escolha</option><option value="Não">Não</option><option value="Sim">Sim</option></select></label>
+    <label id="trocoValor" hidden>Troco para quanto? (R$)<input id="ct" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 100,00"></label>
   </div>
   <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px"><span>Total</span><span id="total">R$ 0,00</span></div>
   <button class="btn" id="checkout" style="margin-top:12px">Finalizar compra</button>
@@ -178,7 +181,7 @@ body:"M34 8L28 24L36 40L30 62L38 96H62L70 62L64 40L72 24L66 8Q50 20 34 8Z"};
 var C={};
 var SF=["PP","P","M","G","GG"],SM=["P","M","G","GG"];
 var P=[];
-var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body"};
+var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body",acessorios:"body",acessorio:"body"};
 /* TEXTOS DA LOJA: edite aqui. Deixe promo vazio ("") para esconder a faixa do topo. */
 var LOJA={promo:"Faça seu pedido pelo WhatsApp",vantagens:[["Peça pelo WhatsApp","Monte a sacola e envie o pedido em um toque."],["Pix, cartão ou dinheiro","Escolha a forma de pagamento ao finalizar."],["Cores e tamanhos","Escolha a cor e o tamanho de cada peça."],["Destaques","Confira as peças em destaque."]]};
 function lerSacola(){try{var a=JSON.parse(localStorage.getItem("liara_sacola")||"[]");return Array.isArray(a)?a.filter(function(i){return i&&i.n&&i.q>0&&+i.p>=0}):[]}catch(e){return[]}}
@@ -187,33 +190,58 @@ function lerDados(){try{return JSON.parse(localStorage.getItem("liara_cliente")|
 function lojaInit(){
   document.getElementById("wa").href="https://wa.me/"+WA+"?text="+encodeURIComponent("Olá! Vim pelo catálogo da LIARA BRAND.");var p=document.getElementById("promo");if(LOJA.promo){p.textContent=LOJA.promo;p.hidden=false}
   document.getElementById("perks").innerHTML=LOJA.vantagens.map(function(v){return "<div><b>"+v[0]+"</b>"+v[1]+"</div>"}).join("");
-  var d=lerDados();["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}})});
+  var d=lerDados();["cn","ca","cp","ctn","ct"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}});e.addEventListener("change",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){};atualizarTroco()})});atualizarTroco();
 }
+function atualizarTroco(){var dinheiro=document.getElementById("cp").value==="Dinheiro",sim=document.getElementById("ctn").value==="Sim";document.getElementById("trocoOp").hidden=!dinheiro;document.getElementById("trocoValor").hidden=!(dinheiro&&sim)}
 var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
 function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
 function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
+function estoqueQtd(p,cor,tamanho){
+  var item=(p.stock||[]).filter(function(x){return String(x.cor).toLowerCase()===String(cor).toLowerCase()&&x.tamanho===tamanho})[0];
+  return item?Number(item.quantidade)||0:0;
+}
+function atualizarDisponibilidadeCard(cd,p){
+  var s=sel[p.id],cor=C[s.c][0],temEscolha=!!s.z,disponivel=temEscolha?estoqueQtd(p,cor,s.z):0;
+  cd.querySelectorAll(".sz").forEach(function(b){
+    var qtd=estoqueQtd(p,cor,b.dataset.z);
+    b.disabled=qtd<1;
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Esgotado nesta combinação";
+    if(qtd<1&&s.z===b.dataset.z){s.z=null;b.setAttribute("aria-pressed","false")}
+  });
+  var add=cd.querySelector(".add");
+  add.disabled=!s.z||disponivel<1;
+  add.textContent=!s.z?"Escolha um tamanho":disponivel<1?"Esgotado":"Adicionar à sacola";
+}
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
   var sw=p.c.map(function(k){return '<button class="sw" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" style="background:'+C[k][1]+'"></button>'}).join("");
-  var sz=p.z.map(function(z){return '<button class="sz" data-z="'+z+'" aria-pressed="'+(z==s.z)+'">'+z+'</button>'}).join("");
-  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div>'+(p.e?'<button class="add">Adicionar à sacola</button>':'<button class="add" disabled>Esgotado</button><a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
+  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz" data-z="'+z+'" '+(qtd<1?'disabled':'')+' aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'">'+z+'</button>'}).join("");
+  var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):0;
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
 }
 function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
 function ok(p){
   var t=qs&&p.n.toLowerCase().indexOf(qs)<0?false:true;if(!t)return false;
   if(fz&&p.z.indexOf(fz)<0)return false;if(fcol&&p.c.indexOf(fcol)<0)return false;if(fpr&&p.p>+fpr)return false;
-  if(cat=="all")return true;if(cat=="F"||cat=="M")return p.s==cat;if(cat=="ofertas")return !!p.o;return p.k==cat;
+  if(cat=="all")return true;if(cat=="F"||cat=="M")return p.s==cat;if(cat=="accessories")return p.a;if(cat=="ofertas")return !!p.o;return p.k==cat;
 }
 function render(){
   document.getElementById("strip").innerHTML=P.filter(function(p){return p.r}).sort(function(a,b){return a.r-b.r}).map(fc).join("");
   var n=0;
   ["F","M"].forEach(function(s){
-    var l=P.filter(function(p){return p.s==s&&ok(p)});n+=l.length;
+    var l=P.filter(function(p){return p.s==s&&!p.a&&ok(p)});n+=l.length;
     document.getElementById("g"+s).innerHTML=l.map(card).join("");
     document.getElementById(s=="F"?"feminino":"masculino").hidden=!l.length;
   });
+  ["F","M"].forEach(function(s){
+    var l=P.filter(function(p){return p.s==s&&p.a&&ok(p)});n+=l.length;
+    var box=document.getElementById(s=="F"?"ac-f":"ac-m");
+    document.getElementById(s=="F"?"gAF":"gAM").innerHTML=l.map(card).join("");
+    box.hidden=!l.length;
+  });
+  document.getElementById("acessorios").hidden=document.getElementById("ac-f").hidden&&document.getElementById("ac-m").hidden;
   var nn=document.getElementById("none");nn.textContent="Nenhuma peça encontrada. Tente outra categoria ou palavra.";nn.hidden=n>0;bubs();
   document.getElementById("destaques").hidden=!document.getElementById("strip").children.length;
   fades();
@@ -230,19 +258,24 @@ document.addEventListener("click",function(e){
       cd.querySelectorAll(".sw").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
       var im=cd.querySelector(".pic img");if(im&&p.imgs)im.src=p.imgs[t.dataset.k];var sv=cd.querySelector(".pic svg");if(sv)sv.setAttribute("fill",C[t.dataset.k][1]);
       cd.querySelector(".cn").textContent=C[t.dataset.k][0];
+      atualizarDisponibilidadeCard(cd,p);
     }else if(t.classList.contains("sz")){
       sel[id].z=t.dataset.z;
       cd.querySelectorAll(".sz").forEach(function(x){x.setAttribute("aria-pressed",x==t)});
+      atualizarDisponibilidadeCard(cd,p);
     }else if(t.classList.contains("add")){
       if(!sel[id].z){toast("Escolha um tamanho primeiro");return}
-      addCart(id,p.n,C[sel[id].c][0],sel[id].z,p.p);
-      upd();toast("Adicionado: "+p.n+" · "+C[sel[id].c][0]+" · "+sel[id].z);
+      var corSelecionada=C[sel[id].c][0],limite=estoqueQtd(p,corSelecionada,sel[id].z);
+      var existente=cart.filter(function(i){return i.id==id&&i.c==corSelecionada&&i.z==sel[id].z})[0];
+      if(!limite||((existente?existente.q:0)+1)>limite){toast("Quantidade indisponível no estoque");return}
+      addCart(id,p.n,corSelecionada,sel[id].z,p.p);
+      upd();toast("Adicionado: "+p.n+" · "+corSelecionada+" · "+sel[id].z);
     }
   }
   if(t.closest("#openCart"))document.getElementById("drawer").classList.add("open");
   if(t.closest("#closeCart"))document.getElementById("drawer").classList.remove("open");
   if(t.dataset&&t.dataset.rm!==undefined){cart.splice(+t.dataset.rm,1);upd()}
-  if(t.dataset&&t.dataset.q){var qa=t.dataset.q.split(":"),ci=cart[+qa[0]];ci.q+=+qa[1];if(ci.q<1)cart.splice(+qa[0],1);upd()}
+  if(t.dataset&&t.dataset.q){var qa=t.dataset.q.split(":"),ci=cart[+qa[0]],produto=P.filter(function(x){return x.id==ci.id})[0],limite=produto?estoqueQtd(produto,ci.c,ci.z):0,novo=ci.q+(+qa[1]);if(novo<1)cart.splice(+qa[0],1);else if(novo>limite)toast("Você já adicionou todas as unidades disponíveis");else ci.q=novo;upd()}
   if(t.id=="checkout")checkout();
 });
 document.getElementById("q").addEventListener("input",function(e){qs=e.target.value.trim().toLowerCase();render()});
@@ -251,11 +284,59 @@ function checkout(){
   if(!cart.length){toast("Sua sacola está vazia");return}
   var bad=null;["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
   if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
-  var tot=0,m="Olá! Gostaria de fazer o seguinte pedido:\n\n";
-  cart.forEach(function(i){tot+=i.p*i.q;m+="- "+i.q+"x "+i.n+" | Cor: "+i.c+" | Tam: "+i.z+" ("+brl(i.p*i.q)+")\n"});
-  m+="\nTotal: "+brl(tot)+"\n\nNome: "+document.getElementById("cn").value.trim()+"\nEndereço: "+document.getElementById("ca").value.trim()+"\nPagamento: "+document.getElementById("cp").value;
-  var a=document.createElement("a");a.href="https://wa.me/"+WA+"?text="+encodeURIComponent(m);a.target="_blank";a.rel="noopener";
-  document.body.appendChild(a);a.click();a.remove();toast("Abrindo o WhatsApp da loja");
+  var pagamento=document.getElementById("cp").value;
+  var precisaTroco=document.getElementById("ctn").value,valorTroco=Number(document.getElementById("ct").value);
+  var estimado=cart.reduce(function(n,i){return n+i.p*i.q},0);
+  if(pagamento==="Dinheiro"){
+    if(!precisaTroco){document.getElementById("ctn").focus();toast("Informe se precisa de troco");return}
+    if(precisaTroco==="Sim"&&(!document.getElementById("ct").value||!Number.isFinite(valorTroco)||valorTroco<=estimado)){document.getElementById("ct").classList.add("bad");document.getElementById("ct").focus();toast("Informe um valor para troco maior que o total do pedido");return}
+  }
+  var botao=document.getElementById("checkout");
+  if(botao.disabled)return;
+  var janela=window.open("about:blank","_blank");
+  botao.disabled=true;botao.textContent="Registrando pedido...";
+  fetch("/api/pedidos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    nome:document.getElementById("cn").value.trim(),
+    endereco:document.getElementById("ca").value.trim(),
+    pagamento:pagamento,
+    precisa_troco:pagamento==="Dinheiro"&&precisaTroco==="Sim",
+    troco_para:pagamento==="Dinheiro"&&precisaTroco==="Sim"?valorTroco:null,
+    itens:cart.map(function(i){return{id:i.id,c:i.c,z:i.z,q:i.q}})
+  })}).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.erro||"Não foi possível registrar o pedido.");return d})})
+  .then(function(pedido){
+    var linhasMensagem=[
+      "Olá! Fiz um pedido pelo catálogo da LIARA BRAND.",
+      "",
+      "🛍️ *Pedido: "+pedido.codigo+"*",
+      "",
+      "*Itens do pedido*"
+    ];
+    cart.forEach(function(i){
+      linhasMensagem.push("• "+i.q+"x "+i.n);
+      linhasMensagem.push("  Cor: "+i.c+" | Tamanho: "+i.z);
+    });
+    linhasMensagem.push(
+      "",
+      "💰 *Total: "+brl(Number(pedido.total))+"*",
+      "",
+      "*Dados para entrega*",
+      "Nome: "+document.getElementById("cn").value.trim(),
+      "Endereço: "+document.getElementById("ca").value.trim(),
+      "Pagamento: "+pagamento
+    );
+    if(pagamento==="Dinheiro"){
+      linhasMensagem.push("Precisa de troco: "+precisaTroco);
+      if(precisaTroco==="Sim")linhasMensagem.push("Troco para: "+brl(valorTroco));
+    }
+    var mensagem=linhasMensagem.join("\n");
+    var destino="https://wa.me/"+WA+"?text="+encodeURIComponent(mensagem);
+    if(janela&&!janela.closed)janela.location.href=destino;else window.location.href=destino;
+    cart=[];upd();document.getElementById("drawer").classList.remove("open");
+    toast("Pedido "+pedido.codigo+" registrado! Abrindo WhatsApp.");
+  }).catch(function(e){
+    if(janela&&!janela.closed)janela.close();
+    toast(e.message||"Não foi possível registrar o pedido.");
+  }).finally(function(){botao.disabled=false;botao.textContent="Finalizar compra"});
 }
 function upd(){
   salvarSacola();
@@ -268,7 +349,7 @@ LOJA.medidas={cab:["Tamanho","Busto","Cintura","Quadril"],linhas:[]};
 function medlink(){return LOJA.medidas.linhas.length?' · <a href="#" class="mlink" data-med>Tabela de medidas</a>':''}
 function abrirMed(){var m=LOJA.medidas;document.getElementById("medt").innerHTML="<table><tr>"+m.cab.map(function(h){return"<th>"+h+"</th>"}).join("")+"</tr>"+m.linhas.map(function(l){return"<tr>"+l.map(function(c){return"<td>"+c+"</td>"}).join("")+"</tr>"}).join("")+"</table><p style=\"color:var(--mute);font-size:13px\">Medidas em cm.</p>";document.getElementById("med").hidden=false}
 /* Sacola salva: confere com os produtos de hoje */
-function reconciliar(){var mu=false;cart=cart.filter(function(i){var p=P.filter(function(x){return x.id==i.id})[0];if(!p||!p.e||p.z.indexOf(i.z)<0||!p.c.some(function(k){return C[k][0]==i.c})){mu=true;return false}if(i.p!=p.p){i.p=p.p;mu=true}return true});if(mu)toast("Sua sacola foi atualizada com os preços e a disponibilidade de hoje");upd()}
+function reconciliar(){var mu=false;cart=cart.filter(function(i){var p=P.filter(function(x){return x.id==i.id})[0],q=p?estoqueQtd(p,i.c,i.z):0;if(!p||!p.e||p.z.indexOf(i.z)<0||!p.c.some(function(k){return C[k][0]==i.c})||q<1){mu=true;return false}if(i.q>q){i.q=q;mu=true}if(i.p!=p.p){i.p=p.p;mu=true}return true});if(mu)toast("Sua sacola foi ajustada conforme o estoque disponível");upd()}
 /* Filtros */
 var fz="",fcol="",fpr="";
 function popularFiltros(){var ord=["PP","P","M","G","GG","XG","Único"],zs=[],cs={};P.forEach(function(p){p.z.forEach(function(z){if(zs.indexOf(z)<0)zs.push(z)});p.c.forEach(function(k){cs[k]=C[k][0]})});
@@ -309,10 +390,13 @@ function carregar(){
     P=rows.map(function(d){
       var vs=d.variantes&&d.variantes.length?d.variantes:[{cor:"Único",hex:"#cccccc"}],im={},ks=vs.map(function(v){var k=slug(v.cor);C[k]=[v.cor,v.hex||"#cccccc"];im[k]=v.imagem||d.imagem_url||"";return k});
       var k=slug(d.categoria||"outros"),p=+d.preco,o=+d.preco_antigo||0,tem=ks.some(function(x){return im[x]});cs[k]=d.categoria;
-      return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:d.em_estoque,
-        tag:d.em_estoque?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
+      var stock=Array.isArray(d.estoque_variantes)?d.estoque_variantes:[];
+      var totalStock=stock.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0);
+      var disponivel=!!d.em_estoque&&totalStock>0;
+      return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,a:k==="acessorios"||k==="acessorio",n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:disponivel,stock:stock,
+        tag:disponivel?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
     });
-    CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["ofertas","Ofertas","%"]]);
+    CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).filter(function(k){return k!=="acessorios"&&k!=="acessorio"}).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["accessories","Acessórios","✦"],["ofertas","Ofertas","%"]]);
     reconciliar();popularFiltros();render();irHash();
   }).catch(function(){clearTimeout(lento);["strip","gF","gM"].forEach(function(i){document.getElementById(i).innerHTML=""});var n=document.getElementById("none");n.innerHTML='Não foi possível carregar os produtos agora. <button class="btn" id="retry">Tentar de novo</button>';n.hidden=false});
 }

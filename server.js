@@ -835,12 +835,8 @@ app.get("/api/admin/produtos", auth, ah(async (_req, res) => {
 app.get("/api/produtos", ah(async (_req, res) => {
   await catalogVisibilityReady;
   await stockTablesReady;
-  // Recuperação: se todos os produtos ficaram ocultos por engano, não deixar a vitrine vazia.
-  const result = await db.query(productRowsSql + `
-    WHERE p.visivel_catalogo IS TRUE
-       OR NOT EXISTS (SELECT 1 FROM produtos WHERE visivel_catalogo IS TRUE)
-    ORDER BY p.id
-  `);
+  // A vitrine pública lista os produtos cadastrados; o painel continua administrando o catálogo.
+  const result = await db.query(productRowsSql + " ORDER BY p.id");
   res.set("Cache-Control", "no-store");
   res.json(result.rows);
 }));

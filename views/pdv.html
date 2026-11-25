@@ -16,8 +16,12 @@ main{max-width:1400px;margin:auto;padding:18px 16px 50px}.intro{margin-bottom:16
 #receipt{display:none}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.cart{position:static}.products{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.products{grid-template-columns:1fr}.bar{align-items:flex-start;flex-wrap:wrap}.bar nav{margin-left:0;width:100%}.product{grid-template-columns:74px minmax(0,1fr)}.photo{width:74px;height:100px}}
 @media print{body>*:not(#receipt){display:none!important}#receipt{display:block!important;color:#000;background:#fff;padding:20px;font:14px monospace}#receipt h1{text-align:center}}
+
+.bar nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.bar nav a{white-space:nowrap}
+@media(max-width:760px){.bar{flex-wrap:wrap}.bar nav{margin-left:0;width:100%;gap:6px}.bar nav a,.bar nav button{font-size:13px;padding:7px 9px}}
 </style></head><body>
-<header class="bar"><b>LIARA <span style="font-weight:400">PDV</span></b><nav><a href="/admin">Painel</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Vendas e pedidos</a><a href="/admin/cupons">Cupons</a><button class="btn alt" id="logout">Sair</button></nav></header>
+<header class="bar"><b>LIARA <span style="font-weight:400">PDV</span></b><nav><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn alt" id="logout">Sair</button></nav></header>
 <main><section class="intro"><h1>Ponto de venda</h1><div class="muted">Registre vendas presenciais usando o mesmo catálogo e estoque da loja.</div></section>
 <div class="layout"><section class="panel"><h2>Produtos</h2><div class="toolbar"><input id="search" type="search" placeholder="Buscar produto ou categoria"><select id="category"><option value="">Todas as categorias</option></select><button class="btn alt" id="refresh">Atualizar</button></div><div class="products" id="products"><p class="muted">Carregando produtos...</p></div></section>
 <aside class="panel cart"><h2>Carrinho <span class="muted" id="count">(0 itens)</span></h2><div id="cart"><div class="empty">Selecione produtos para iniciar uma venda.</div></div><div class="total"><span>Total</span><span id="total">R$ 0,00</span></div>

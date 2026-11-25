@@ -10,6 +10,13 @@ const db = new Pool({
   ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
 });
 
+const catalogVisibilityReady = db.query(
+  "ALTER TABLE produtos ADD COLUMN IF NOT EXISTS visivel_catalogo BOOLEAN NOT NULL DEFAULT TRUE"
+).catch((error) => {
+  console.error("Não foi possível preparar a visibilidade do catálogo:", error.message);
+  throw error;
+});
+
 app.use(express.json({ limit: "6mb" }));
 
 // Health check real: confirma que a aplicação e o banco respondem.
@@ -66,7 +73,7 @@ function auth(req, res, next) {
   }
 }
 
-const COLS = "nome,descricao,preco,preco_antigo,imagem_url,categoria,genero,variantes,tamanhos,em_estoque,destaque";
+const COLS = "nome,descricao,preco,preco_antigo,imagem_url,categoria,genero,variantes,tamanhos,em_estoque,destaque,visivel_catalogo";
 function campos(b) {
   const preco = Number(b.preco);
   if (!b.nome || !String(b.nome).trim() || b.preco === "" || b.preco == null || !Number.isFinite(preco) || preco < 0) return null;
@@ -78,7 +85,7 @@ function campos(b) {
     b.genero === "Masculino" ? "Masculino" : "Feminino",
     JSON.stringify(Array.isArray(b.variantes) ? b.variantes : []),
     Array.isArray(b.tamanhos) ? b.tamanhos : [],
-    b.em_estoque !== false, !!b.destaque,
+    b.em_estoque !== false, !!b.destaque, b.visivel_catalogo !== false,
   ];
 }
 
@@ -577,43 +584,67 @@ app.get("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
   res.json(result.rows);
 }));
 
-// Catálogo público
-app.get("/api/produtos", ah(async (_req, res) => {
+// Produtos e estoque: a rota administrativa inclui itens ocultos; a pública mostra apenas itens visíveis.
+const productRowsSql = `
+  SELECT p.*,
+    COALESCE(s.variantes, '[]'::json) AS estoque_variantes
+  FROM produtos p
+  LEFT JOIN LATERAL (
+    SELECT json_agg(json_build_object(
+      'cor', e.cor, 'tamanho', e.tamanho, 'quantidade', e.quantidade
+    )) AS variantes
+    FROM estoque_variantes e
+    WHERE e.produto_id = p.id
+  ) s ON TRUE
+`;
+
+app.get("/api/admin/produtos", auth, ah(async (_req, res) => {
+  await catalogVisibilityReady;
   await stockTablesReady;
-  const result = await db.query(`
-    SELECT p.*,
-      COALESCE(s.variantes, '[]'::json) AS estoque_variantes
-    FROM produtos p
-    LEFT JOIN LATERAL (
-      SELECT json_agg(json_build_object(
-        'cor', e.cor, 'tamanho', e.tamanho, 'quantidade', e.quantidade
-      )) AS variantes
-      FROM estoque_variantes e
-      WHERE e.produto_id = p.id
-    ) s ON TRUE
-    ORDER BY p.id
-  `);
+  const result = await db.query(productRowsSql + " ORDER BY p.id");
+  res.set("Cache-Control", "no-store");
+  res.json(result.rows);
+}));
+
+app.get("/api/produtos", ah(async (_req, res) => {
+  await catalogVisibilityReady;
+  await stockTablesReady;
+  const result = await db.query(productRowsSql + " WHERE p.visivel_catalogo IS TRUE ORDER BY p.id");
   res.set("Cache-Control", "no-store");
   res.json(result.rows);
 }));
 
 // Operações de produtos protegidas por token de administrador
 app.post("/api/produtos", auth, ah(async (req, res) => {
+  await catalogVisibilityReady;
   const v = campos(req.body || {});
   if (!v) return res.status(400).json({ erro: "Nome e preço válido são obrigatórios" });
+  const placeholders = v.map((_, i) => "$" + (i + 1)).join(",");
   const result = await db.query(
-    `INSERT INTO produtos(${COLS}) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`, v
+    `INSERT INTO produtos(${COLS}) VALUES(${placeholders}) RETURNING *`, v
   );
   res.status(201).json(result.rows[0]);
 }));
 
 app.put("/api/produtos/:id", auth, ah(async (req, res) => {
+  await catalogVisibilityReady;
   const v = campos(req.body || {});
   if (!v) return res.status(400).json({ erro: "Nome e preço válido são obrigatórios" });
-  const sets = COLS.split(",").map((c, i) => `${c}=$${i + 1}`).join(",");
+  const sets = COLS.split(",").map((c, i) => `${c}=${i + 1}`).join(",");
   const result = await db.query(
-    `UPDATE produtos SET ${sets}, data_atualizacao=now() WHERE id=$12 RETURNING *`,
+    `UPDATE produtos SET ${sets}, data_atualizacao=now() WHERE id=$13 RETURNING *`,
     [...v, Number(req.params.id)]
+  );
+  if (!result.rows[0]) return res.status(404).json({ erro: "Produto não encontrado" });
+  res.json(result.rows[0]);
+}));
+
+app.patch("/api/admin/produtos/:id/catalogo", auth, ah(async (req, res) => {
+  await catalogVisibilityReady;
+  const visible = req.body?.visivel_catalogo === true;
+  const result = await db.query(
+    "UPDATE produtos SET visivel_catalogo=$1, data_atualizacao=now() WHERE id=$2 RETURNING id,visivel_catalogo",
+    [visible, Number(req.params.id)]
   );
   if (!result.rows[0]) return res.status(404).json({ erro: "Produto não encontrado" });
   res.json(result.rows[0]);

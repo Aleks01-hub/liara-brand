@@ -351,12 +351,12 @@ function checkout(){
     var linhasMensagem=[
       "Olá! Fiz um pedido pelo catálogo da LIARA BRAND.",
       "",
-      "🛍️ *Pedido: "+pedido.codigo+"*",
+      "Pedido: "+pedido.codigo+"*,
       "",
       "*Itens do pedido*"
     ];
     cart.forEach(function(i){
-      linhasMensagem.push("• "+i.q+"x "+i.n);
+      linhasMensagem.push("- "+i.q+"x "+i.n);
       linhasMensagem.push("  Cor: "+i.c+" | Tamanho: "+i.z);
     });
     linhasMensagem.push(

@@ -43,6 +43,10 @@ app.get(["/admin/pedidos", "/admin/pedidos/"], (_req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.sendFile(path.join(__dirname, "views", "pedidos.html"));
 });
+app.get(["/admin/clientes", "/admin/clientes/"], (_req, res) => {
+  res.set("X-Robots-Tag", "noindex");
+  res.sendFile(path.join(__dirname, "views", "clientes.html"));
+});
 app.get(["/admin/cupons", "/admin/cupons/"], (_req, res) => {
   res.set("X-Robots-Tag", "noindex");
   res.sendFile(path.join(__dirname, "views", "cupons.html"));
@@ -581,6 +585,96 @@ app.get("/api/admin/estoque/movimentacoes", auth, ah(async (req, res) => {
   const result = await db.query(
     "SELECT * FROM movimentacoes_estoque ORDER BY criado_em DESC,id DESC LIMIT 300"
   );
+  res.json(result.rows);
+}));
+
+
+// Cadastro e histórico de clientes.
+const clientsTableReady = ordersTableReady.then(() => db.query(`
+  CREATE TABLE IF NOT EXISTS clientes (
+    id BIGSERIAL PRIMARY KEY,
+    nome VARCHAR(120) NOT NULL,
+    telefone VARCHAR(30),
+    aniversario DATE,
+    endereco TEXT,
+    observacoes TEXT,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  CREATE INDEX IF NOT EXISTS idx_clientes_nome ON clientes (lower(nome));
+  CREATE INDEX IF NOT EXISTS idx_clientes_telefone ON clientes (telefone);
+`)).then(() => true).catch((error) => {
+  console.error("Não foi possível preparar a tabela clientes:", error.message);
+  throw error;
+});
+
+function normalizarCliente(body) {
+  const nome = String(body.nome || "").trim();
+  const telefone = String(body.telefone || "").trim();
+  const aniversario = body.aniversario || null;
+  const endereco = String(body.endereco || "").trim();
+  const observacoes = String(body.observacoes || "").trim();
+  const dataValida = !aniversario || (typeof aniversario === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(aniversario) && !Number.isNaN(Date.parse(aniversario + "T00:00:00Z")));
+  if (!nome || nome.length > 120) return { erro: "Informe um nome com até 120 caracteres." };
+  if (telefone.length > 30 || endereco.length > 1000 || observacoes.length > 2000) return { erro: "Confira os limites de telefone, endereço e observações." };
+  if (!dataValida) return { erro: "A data de aniversário é inválida." };
+  return { valores: [nome, telefone || null, aniversario, endereco || null, observacoes || null] };
+}
+
+app.get("/api/admin/clientes", auth, ah(async (_req, res) => {
+  await clientsTableReady;
+  const result = await db.query(`
+    SELECT c.*,
+      COUNT(p.id)::int AS total_pedidos,
+      COALESCE(SUM(p.total),0)::numeric(12,2) AS total_compras,
+      MAX(p.criado_em) AS ultima_compra
+    FROM clientes c
+    LEFT JOIN pedidos p ON lower(trim(p.cliente_nome)) = lower(trim(c.nome))
+    GROUP BY c.id
+    ORDER BY c.nome
+  `);
+  res.set("Cache-Control", "no-store");
+  res.json(result.rows);
+}));
+
+app.post("/api/admin/clientes", auth, ah(async (req, res) => {
+  await clientsTableReady;
+  const v = normalizarCliente(req.body || {});
+  if (v.erro) return res.status(400).json({ erro: v.erro });
+  const result = await db.query(
+    "INSERT INTO clientes(nome,telefone,aniversario,endereco,observacoes) VALUES($1,$2,$3,$4,$5) RETURNING *",
+    v.valores
+  );
+  res.status(201).json(result.rows[0]);
+}));
+
+app.put("/api/admin/clientes/:id", auth, ah(async (req, res) => {
+  await clientsTableReady;
+  const v = normalizarCliente(req.body || {});
+  if (v.erro) return res.status(400).json({ erro: v.erro });
+  const result = await db.query(
+    "UPDATE clientes SET nome=$1,telefone=$2,aniversario=$3,endereco=$4,observacoes=$5,atualizado_em=now() WHERE id=$6 RETURNING *",
+    [...v.valores, Number(req.params.id)]
+  );
+  if (!result.rows[0]) return res.status(404).json({ erro: "Cliente não encontrado." });
+  res.json(result.rows[0]);
+}));
+
+app.get("/api/admin/clientes/:id/compras", auth, ah(async (req, res) => {
+  await clientsTableReady;
+  const cliente = await db.query("SELECT nome FROM clientes WHERE id=$1", [Number(req.params.id)]);
+  if (!cliente.rows[0]) return res.status(404).json({ erro: "Cliente não encontrado." });
+  const result = await db.query(`
+    SELECT p.id,p.codigo,p.status,p.origem,p.forma_pagamento,p.subtotal,p.desconto,p.total,p.criado_em,
+      COALESCE(json_agg(json_build_object('nome',i.produto_nome,'cor',i.cor,'tamanho',i.tamanho,'quantidade',i.quantidade,'subtotal',i.subtotal))
+        FILTER (WHERE i.id IS NOT NULL),'[]'::json) AS itens
+    FROM pedidos p
+    LEFT JOIN pedido_itens i ON i.pedido_id=p.id
+    WHERE lower(trim(p.cliente_nome))=lower(trim($1))
+    GROUP BY p.id
+    ORDER BY p.criado_em DESC
+    LIMIT 100
+  `, [cliente.rows[0].nome]);
   res.json(result.rows);
 }));
 

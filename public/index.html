@@ -195,6 +195,17 @@ skirt:"M32 22H68L86 100H14Z",
 body:"M34 8L28 24L36 40L30 62L38 96H62L70 62L64 40L72 24L66 8Q50 20 34 8Z"};
 var C={};
 var SF=["PP","P","M","G","GG"],SM=["P","M","G","GG"];
+function compararTamanho(a,b){
+  var x=String(a).trim().toUpperCase(),y=String(b).trim().toUpperCase();
+  var ordem=["PP","XS","P","S","M","G","L","GG","XL","XG","XGG","EG","EGG","2G","3G","4G","5G","ÚNICO","UNICO"];
+  var ix=ordem.indexOf(x),iy=ordem.indexOf(y);
+  var nx=/^\\d+(?:[.,]\\d+)?$/.test(x),ny=/^\\d+(?:[.,]\\d+)?$/.test(y);
+  if(nx&&ny)return Number(x.replace(",","."))-Number(y.replace(",","."));
+  if(nx!==ny)return nx?-1:1;
+  if(ix>=0||iy>=0)return (ix<0?999:ix)-(iy<0?999:iy);
+  return x.localeCompare(y,"pt-BR",{numeric:true,sensitivity:"base"});
+}
+function ordenarTamanhos(tamanhos){return (Array.isArray(tamanhos)?tamanhos.slice():[]).sort(compararTamanho);}
 var P=[];
 var CATS=[],ICON={vestidos:"dress",blusas:"tee",calcas:"pants",moletons:"hoodie",bermudas:"shorts",saias:"skirt",bodies:"body",acessorios:"body",acessorio:"body"};
 /* TEXTOS DA LOJA: edite aqui. Deixe promo vazio ("") para esconder a faixa do topo. */
@@ -388,7 +399,7 @@ function reconciliar(){var mu=false;cart=cart.filter(function(i){var p=P.filter(
 /* Filtros */
 var fz="",fcol="",fpr="";
 function popularFiltros(){var ord=["PP","P","M","G","GG","XG","Único"],zs=[],cs={};P.forEach(function(p){p.z.forEach(function(z){if(zs.indexOf(z)<0)zs.push(z)});p.c.forEach(function(k){cs[k]=C[k][0]})});
-  zs.sort(function(a,b){var x=ord.indexOf(a),y=ord.indexOf(b);return(x<0?100+(+a||0):x)-(y<0?100+(+b||0):y)});
+  zs.sort(compararTamanho);
   document.getElementById("fz").innerHTML='<option value="">Todos os tamanhos</option>'+zs.map(function(z){return'<option>'+z+'</option>'}).join("");
   document.getElementById("fc2").innerHTML='<option value="">Todas as cores</option>'+Object.keys(cs).map(function(k){return'<option value="'+k+'">'+cs[k]+'</option>'}).join("")}
 function filtrar(){fz=document.getElementById("fz").value;fcol=document.getElementById("fc2").value;fpr=document.getElementById("fp").value;document.getElementById("fx").hidden=!(fz||fcol||fpr);render()}
@@ -429,7 +440,7 @@ function carregar(){
       var totalStock=stock.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0);
       var disponivel=!!d.em_estoque&&totalStock>0;
       return {id:d.id,s:d.genero=="Masculino"?"M":"F",k:k,a:k==="acessorios"||k==="acessorio",n:d.nome,sh:ICON[k]||"tee",p:p,o:o>p?o:0,e:disponivel,stock:stock,
-        tag:disponivel?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"],imgs:tem?im:null,r:d.destaque?++rk:0};
+        tag:disponivel?(o>p?"-"+Math.round((1-p/o)*100)+"%":"Novo"):"ESGOTADO",c:ks,z:ordenarTamanhos(d.tamanhos&&d.tamanhos.length?d.tamanhos:["Único"]),imgs:tem?im:null,r:d.destaque?++rk:0};
     });
     CATS=[["all","Todos","✦"],["F","Feminino","dress"],["M","Masculino","hoodie"]].concat(Object.keys(cs).filter(function(k){return k!=="acessorios"&&k!=="acessorio"}).map(function(k){return [k,cs[k],ICON[k]||"tee"]})).concat([["accessories","Acessórios","✦"],["ofertas","Ofertas","%"]]);
     reconciliar();popularFiltros();render();irHash();

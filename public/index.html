@@ -68,7 +68,6 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sz{min-width:36px;height:32px;border:1.5px solid var(--line);background:none;border-radius:8px;font-weight:700;font-size:13px}
 .sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
 .sw:disabled,.sz:disabled{opacity:.28;cursor:not-allowed;border-style:dashed;border-color:var(--mute);filter:grayscale(.35)}
-.color-size-list{display:block}.color-size-group{margin:7px 0 10px}.color-size-name{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;margin-bottom:5px}.color-size-name i{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);display:inline-block;flex:none}.color-size-options{display:flex;flex-wrap:wrap;gap:6px}.combo{border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:8px;padding:6px 9px;font-weight:700;font-size:12px}.combo[aria-pressed="true"]{background:var(--acc);color:var(--accink);border:2px solid #fff;box-shadow:0 0 0 2px rgba(31,47,70,.85)}.combo.sold-out{opacity:.45;border:1.5px dashed var(--mute);filter:grayscale(.5)}.combo.sold-out[aria-pressed="true"]{opacity:.7}
 /* Seleção de cor e tamanho com contraste reforçado */
 .sw[aria-pressed="true"]{outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 5px rgba(31,47,70,.9);transform:scale(1.08)}
 .sz[aria-pressed="true"]{background:var(--acc);color:var(--accink);border:2px solid #fff;box-shadow:0 0 0 2px rgba(31,47,70,.85);font-weight:800}
@@ -236,30 +235,35 @@ function estoqueCorTotal(p,cor){
 }
 function atualizarDisponibilidadeCard(cd,p){
   var s=sel[p.id],cor=C[s.c][0],disponivel=s.z?estoqueQtd(p,cor,s.z):estoqueCorTotal(p,cor);
-  cd.querySelectorAll(".combo").forEach(function(b){
-    var qtd=estoqueQtd(p,C[b.dataset.k][0],b.dataset.z);
+  cd.querySelectorAll(".sw").forEach(function(b){
+    var qtd=s.z?estoqueQtd(p,C[b.dataset.k][0],s.z):estoqueCorTotal(p,C[b.dataset.k][0]);
+    b.disabled=false;
+    b.classList.toggle("sold-out",qtd<1);
+    b.title=qtd>0?(qtd+" unidade(s) disponível(is)"+(s.z?" neste tamanho":" nesta cor")):"Esgotado nesta combinação";
+    b.setAttribute("aria-pressed",b.dataset.k===s.c?"true":"false");
+  });
+  cd.querySelectorAll(".sz").forEach(function(b){
+    var qtd=estoqueQtd(p,cor,b.dataset.z);
+    b.disabled=false;
     b.classList.toggle("sold-out",qtd<1);
     b.title=qtd>0?(qtd+" unidade(s) disponível(is)"):"Esgotado nesta combinação";
-    b.setAttribute("aria-pressed",b.dataset.k===s.c&&b.dataset.z===s.z?"true":"false");
+    b.setAttribute("aria-pressed",b.dataset.z===s.z?"true":"false");
   });
   var aviso=cd.querySelector(".stock-flag");
   if(aviso)aviso.hidden=disponivel>0;
   var add=cd.querySelector(".add");
   add.disabled=!s.z||estoqueQtd(p,cor,s.z)<1;
-  add.textContent=!s.z?"Escolha uma cor e tamanho":add.disabled?"Esgotado":"Adicionar à sacola";
+  add.textContent=!s.z?"Escolha um tamanho":add.disabled?"Esgotado":"Adicionar à sacola";
 }
 function card(p){
   sel[p.id]=sel[p.id]||{c:p.c[0],z:null};var s=sel[p.id];
-  var grupos=p.c.map(function(k){
-    var nome=C[k][0];
-    var tamanhos=p.z.map(function(z){
-      var qtd=estoqueQtd(p,nome,z),selecionado=k===s.c&&z===s.z;
-      return '<button class="combo'+(qtd<1?' sold-out':'')+'" data-k="'+k+'" data-z="'+z+'" aria-pressed="'+selecionado+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)": "Esgotado nesta combinação")+'">'+nome+' '+z+'</button>';
-    }).join("");
-    return '<div class="color-size-group"><span class="color-size-name"><i style="background:'+C[k][1]+'"></i>'+nome+'</span><div class="color-size-options">'+tamanhos+'</div></div>';
+  var sw=p.c.map(function(k){
+    var qtd=s.z?estoqueQtd(p,C[k][0],s.z):estoqueCorTotal(p,C[k][0]);
+    return '<button class="sw'+(qtd<1?' sold-out':'')+'" data-k="'+k+'" aria-label="Cor '+C[k][0]+'" aria-pressed="'+(k==s.c)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'" style="background:'+C[k][1]+'"></button>';
   }).join("");
+  var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz'+(qtd<1?' sold-out':'')+'" data-z="'+z+'" aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'">'+z+'</button>'}).join("");
   var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):0,qtdCorInicial=estoqueCorTotal(p,C[s.c][0]);
-  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="stock-flag"'+((s.z?qtdInicial:qtdCorInicial)>0?' hidden':'')+'>Esgotado</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row color-size-list"><span class="lbl">Cor e tamanho</span>'+grupos+'</div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha uma cor e tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="stock-flag"'+((s.z?qtdInicial:qtdCorInicial)>0?' hidden':'')+'>Esgotado</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
 }
 function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
 function ok(p){
@@ -293,12 +297,7 @@ document.addEventListener("click",function(e){
   if(g){var el=document.getElementById("p"+g.dataset.go);if(el){el.classList.add("hl");setTimeout(function(){el.classList.remove("hl")},2000)}}
   if(cd){
     var id=+cd.dataset.id,p=P.filter(function(x){return x.id==id})[0];
-    if(t.classList.contains("combo")){
-      if(t.disabled)return;
-      sel[id].c=t.dataset.k;sel[id].z=t.dataset.z;
-      var imc=cd.querySelector(".pic img");if(imc&&p.imgs)imc.src=p.imgs[t.dataset.k];var svc=cd.querySelector(".pic svg");if(svc)svc.setAttribute("fill",C[t.dataset.k][1]);
-      atualizarDisponibilidadeCard(cd,p);
-    }else if(t.classList.contains("sw")){
+    if(t.classList.contains("sw")){
       if(t.disabled)return;
       sel[id].c=t.dataset.k;
       cd.querySelectorAll(".sw").forEach(function(x){x.setAttribute("aria-pressed",x==t)});

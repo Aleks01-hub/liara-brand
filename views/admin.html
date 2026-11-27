@@ -176,13 +176,52 @@ function listar(){api("/api/admin/produtos").then(function(d){if(!Array.isArray(
   $("cats").innerHTML=cats().map(function(c){return '<option value="'+esc(c)+'">'}).join("");render()})}
 function render(){
   var n=L.length,e=L.filter(function(p){return p.em_estoque}).length;
-  var unidades=L.reduce(function(total,p){return total+(Array.isArray(p.estoque_variantes)?p.estoque_variantes.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0):0)},0);
-  $("stats").innerHTML=[["Produtos",n],["Em estoque",e],["Esgotados",n-e],["Unidades disponíveis",unidades],["Destaques",L.filter(function(p){return p.destaque}).length]].map(function(x){return "<div><b>"+x[1]+"</b><span>"+x[0]+"</span></div>"}).join("");
+  var unidades=L.reduce(function(total,p){
+    return total+(Array.isArray(p.estoque_variantes)?p.estoque_variantes.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0):0);
+  },0);
+  $("stats").innerHTML=[["Produtos",n],["Em estoque",e],["Esgotados",n-e],["Unidades disponíveis",unidades],["Destaques",L.filter(function(p){return p.destaque}).length]]
+    .map(function(x){return "<div><b>"+x[1]+"</b><span>"+x[0]+"</span></div>"}).join("");
   var q=$("busca").value.trim().toLowerCase(),s=$("fsec").value,c=$("fcat").value,st=$("fst").value,o=$("ord").value;
-  var r=L.filter(function(p){return(!q||(p.nome+" "+p.categoria).toLowerCase().indexOf(q)>=0)&&(!s||p.genero==s)&&(!c||p.categoria==c)&&(st===""||(st=="1"?p.em_estoque:st=="0"?!p.em_estoque:st=="d"?p.destaque:p.visivel_catalogo===false))});
-  r.sort(o=="nome"?function(a,b){return a.nome.localeCompare(b.nome)}:o=="menor"?function(a,b){return a.preco-b.preco}:o=="maior"?function(a,b){return b.preco-a.preco}:function(a,b){return new Date(b.data_atualizacao)-new Date(a.data_atualizacao)});
-  $("lista").innerHTML=r.map(function(p){var vs=p.variantes||[],im=p.imagem_url||(vs.filter(function(v){return v.imagem})[0]||{}).imagem,of=+p.preco_antigo>+p.preco;
-    return '<article class="p'+(p.em_estoque?"":" off")+'" data-id="'+p.id+'"><div class="th">'+(im?'<img src="'+esc(im)+'" alt="">':"sem foto")+'</div><div class="in"><b>'+esc(p.nome)+'</b>'+(p.visivel_catalogo===false?'<div class="mt" style="color:var(--bad);font-weight:700">Oculto do catálogo</div>':'')+'<div class="mt">'+esc(p.genero)+" · "+esc(p.categoria)+'</div><div class="pr"><b>'+brl(p.preco)+"</b>"+(of?"<s>"+brl(p.preco_antigo)+'</s><span class="of">-'+Math.round((1-p.preco/p.preco_antigo)*100)+"%</span>":"")+'</div><div>'+vs.map(function(v){return '<i class="dot" title="'+esc(v.cor)+'" style="background:'+esc(v.hex||"#ccc")+'"></i>'}).join("")+'</div><div class="mt">Tamanhos: '+esc(ordenarTamanhosAdmin(p.tamanhos||[]).join(", ")||"—")+'</div><div class="mt" style="font-weight:700;color:var(--ok)">'+(Array.isArray(p.estoque_variantes)?p.estoque_variantes.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0):0)+' unidades disponíveis+'</div></div><div class="ac"><label class="sw"><input type="checkbox" data-st'+(p.em_estoque?" checked":"")+'><i></i><span>'+(p.em_estoque?"Em estoque":"Esgotado")+'</span></label><button data-dest class="'+(p.destaque?"on":"")+'">★ Destaque</button><button data-catvis>'+(p.visivel_catalogo===false?"Mostrar no catálogo":"Ocultar do catálogo")+'</button><button data-ed>Editar</button><button data-dup>Duplicar</button><button data-del class="d">Excluir</button></div></article>'}).join("")||'<div class="vazio">Nenhum produto encontrado.</div>'}
+  var r=L.filter(function(p){
+    return (!q||(p.nome+" "+p.categoria).toLowerCase().indexOf(q)>=0)&&
+      (!s||p.genero==s)&&(!c||p.categoria==c)&&
+      (st===""||(st==="1"?p.em_estoque:st==="0"?!p.em_estoque:st==="d"?p.destaque:p.visivel_catalogo===false));
+  });
+  r.sort(o==="nome"?function(a,b){return a.nome.localeCompare(b.nome)}:
+    o==="menor"?function(a,b){return a.preco-b.preco}:
+    o==="maior"?function(a,b){return b.preco-a.preco}:
+    function(a,b){return new Date(b.data_atualizacao)-new Date(a.data_atualizacao)});
+  $("lista").innerHTML=r.map(function(p){
+    var vs=p.variantes||[];
+    var im=p.imagem_url||(vs.filter(function(v){return v.imagem})[0]||{}).imagem;
+    var of=+p.preco_antigo>+p.preco;
+    var totalProduto=Array.isArray(p.estoque_variantes)?
+      p.estoque_variantes.reduce(function(a,x){return a+(Number(x.quantidade)||0)},0):0;
+    var coresHtml=vs.map(function(v){
+      return '<i class="dot" title="'+esc(v.cor)+'" style="background:'+esc(v.hex||"#ccc")+'"></i>';
+    }).join("");
+    var statusHtml=p.visivel_catalogo===false?
+      '<div class="mt" style="color:var(--bad);font-weight:700">Oculto do catálogo</div>':"";
+    var precoAntigo=of?'<s>'+brl(p.preco_antigo)+'</s><span class="of">-'+Math.round((1-p.preco/p.preco_antigo)*100)+'%</span>':"";
+    return `<article class="p${p.em_estoque?"":" off"}" data-id="${p.id}">
+      <div class="th">${im?'<img src="'+esc(im)+'" alt="">':"sem foto"}</div>
+      <div class="in">
+        <b>${esc(p.nome)}</b>${statusHtml}
+        <div class="mt">${esc(p.genero)} · ${esc(p.categoria)}</div>
+        <div class="pr"><b>${brl(p.preco)}</b>${precoAntigo}</div>
+        <div>${coresHtml}</div>
+        <div class="mt">Tamanhos: ${esc(ordenarTamanhosAdmin(p.tamanhos||[]).join(", ")||"—")}</div>
+        <div class="mt" style="font-weight:700;color:var(--ok)">${totalProduto} unidades disponíveis</div>
+      </div>
+      <div class="ac">
+        <label class="sw"><input type="checkbox" data-st${p.em_estoque?" checked":""}><i></i><span>${p.em_estoque?"Em estoque":"Esgotado"}</span></label>
+        <button data-dest class="${p.destaque?"on":""}">★ Destaque</button>
+        <button data-catvis>${p.visivel_catalogo===false?"Mostrar no catálogo":"Ocultar do catálogo"}</button>
+        <button data-ed>Editar</button><button data-dup>Duplicar</button><button data-del class="d">Excluir</button>
+      </div>
+    </article>`;
+  }).join("")||'<div class="vazio">Nenhum produto encontrado.</div>';
+}
 ["busca","fsec","fcat","fst","ord"].forEach(function(i){$(i).oninput=render});
 function payload(p,o){return Object.assign({nome:p.nome,descricao:p.descricao,preco:p.preco,preco_antigo:p.preco_antigo,imagem_url:p.imagem_url,categoria:p.categoria,genero:p.genero,variantes:p.variantes,tamanhos:p.tamanhos,em_estoque:p.em_estoque,destaque:p.destaque,visivel_catalogo:p.visivel_catalogo!==false},o||{})}
 function achar(el){var c=el.closest(".p");return L.filter(function(x){return x.id==c.dataset.id})[0]}

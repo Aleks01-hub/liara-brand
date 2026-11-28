@@ -142,6 +142,7 @@ html,body{max-width:100%;overflow-x:clip}
 .it{align-items:center}.it>span{flex:1}
 .mt0{flex:none;width:52px;height:65px;border-radius:8px;background:var(--card);overflow:hidden;display:grid;place-items:center}
 .mt0 img{width:100%;height:100%;object-fit:cover}.mt0 svg{width:70%;height:auto}
+.delivery-choice{display:flex;gap:8px;margin:10px 0}.delivery-choice button{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--card);color:var(--ink);font-weight:700}.delivery-choice button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}.pickup-address{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;white-space:pre-line}.store-info{white-space:pre-line;margin-bottom:12px}.policy-links{display:flex;justify-content:center;gap:8px 16px;flex-wrap:wrap;margin-top:12px}.policy-links button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;padding:3px}.policy-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;display:grid;place-items:center;padding:16px}.policy-card{background:var(--card);color:var(--ink);border-radius:16px;padding:20px;width:min(620px,100%);max-height:85vh;overflow:auto}.policy-card h2{margin-top:0}.policy-body{white-space:pre-wrap;line-height:1.6}.policy-card button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -165,13 +166,18 @@ html,body{max-width:100%;overflow-x:clip}
 <div class="sec empty" id="none" hidden>Nenhuma peça encontrada. Tente outra categoria ou palavra.</div>
 <section class="perks" id="perks"></section>
 </main>
-<footer>© 2026 LIARA BRAND. Todos os direitos reservados.</footer>
+<footer><div id="storeInfo" class="store-info"></div>© 2026 LIARA BRAND. Todos os direitos reservados.
+  <div class="policy-links"><button data-policy="politica_entrega">Entrega e frete</button><button data-policy="politica_trocas">Trocas e devoluções</button><button data-policy="politica_privacidade">Privacidade</button><button data-policy="politica_arrependimento">Arrependimento e cancelamento</button></div>
+</footer>
+<div class="policy-modal" id="policyModal" hidden><div class="policy-card" role="dialog" aria-modal="true" aria-labelledby="policyTitle"><h2 id="policyTitle"></h2><div class="policy-body" id="policyBody"></div><button id="closePolicy" style="margin-top:16px">Fechar</button></div></div>
 <aside id="drawer" aria-label="Sacola de compras">
   <div style="display:flex;justify-content:space-between;align-items:center"><h2>Sua sacola</h2><button class="cartbtn" id="closeCart">Fechar</button></div>
   <div id="items"></div>
   <div class="fld">
     <label>Nome completo<input id="cn" autocomplete="name"></label>
-    <label>Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
+    <div class="delivery-choice" role="group" aria-label="Forma de recebimento"><button type="button" id="modoEntrega" data-delivery-mode="entrega" aria-pressed="true">Entrega</button><button type="button" id="modoRetirada" data-delivery-mode="retirada" aria-pressed="false">Retirada na loja</button></div>
+    <label id="deliveryAddress">Endereço de entrega<textarea id="ca" rows="2" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></textarea></label>
+    <div id="pickupAddressInfo" hidden><b>Endereço para retirada:</b><div class="pickup-address" id="pickupAddress"></div></div>
     <label>Forma de pagamento<select id="cp"><option value="">Escolha</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select></label>
     <label id="trocoOp" hidden>Precisa de troco?<select id="ctn"><option value="">Escolha</option><option value="Não">Não</option><option value="Sim">Sim</option></select></label>
     <label id="trocoValor" hidden>Troco para quanto? (R$)<input id="ct" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 100,00"></label>
@@ -184,7 +190,8 @@ html,body{max-width:100%;overflow-x:clip}
 <a id="wa" class="wa" target="_blank" rel="noopener" aria-label="Falar com a loja no WhatsApp" title="Falar no WhatsApp"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="#fff" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/><path fill="#fff" d="M16.6 14.2c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-1.4-.7-2.4-1.3-3.3-2.9-.2-.3.2-.3.7-1.1.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.7.7-1 1.4-1 2.2 0 .9.4 1.8.9 2.5 1.3 1.8 2.9 3.1 5 3.9 1.9.7 2.3.5 2.7.5.7-.1 1.4-.6 1.6-1.2.2-.5.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg></a>
 <div id="toast" role="status"></div>
 <script>
-var WA="5588988745392";/* número da loja com DDI+DDD, só dígitos. Ex.: 5588999999999 */
+var WA="5588988745392";
+var storeConfig={},tipoEntrega="entrega";/* número da loja com DDI+DDD, só dígitos. Ex.: 5588999999999 */
 var SH={
 tee:"M30 10L10 28L22 40L30 34V100H70V34L78 40L90 28L70 10Q50 24 30 10Z",
 crop:"M30 20L10 36L22 46L30 40V80H70V40L78 46L90 36L70 20Q50 34 30 20Z",
@@ -218,8 +225,14 @@ function lojaInit(){
   document.getElementById("wa").href="https://wa.me/"+WA+"?text="+encodeURIComponent("Olá! Vim pelo catálogo da LIARA BRAND.");var p=document.getElementById("promo");if(LOJA.promo){p.textContent=LOJA.promo;p.hidden=false}
   document.getElementById("perks").innerHTML=LOJA.vantagens.map(function(v){return "<div><b>"+v[0]+"</b>"+v[1]+"</div>"}).join("");
   var d=lerDados();["cn","ca","cp","ctn","ct"].forEach(function(i){var e=document.getElementById(i);if(d[i])e.value=d[i];e.addEventListener("input",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){}});e.addEventListener("change",function(){var o=lerDados();o[i]=e.value;try{localStorage.setItem("liara_cliente",JSON.stringify(o))}catch(x){};atualizarTroco()})});atualizarTroco();
+  fetch("/api/config-loja").then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(c){storeConfig=c||{};renderStoreInfo();document.getElementById("modoRetirada").disabled=!String(storeConfig.endereco_retirada||"").trim();document.getElementById("pickupAddress").textContent=storeConfig.endereco_retirada||"Endereço de retirada ainda não cadastrado.";setTipoEntrega(tipoEntrega)}).catch(function(){renderStoreInfo()});
 }
 function atualizarTroco(){var dinheiro=document.getElementById("cp").value==="Dinheiro",sim=document.getElementById("ctn").value==="Sim";document.getElementById("trocoOp").hidden=!dinheiro;document.getElementById("trocoValor").hidden=!(dinheiro&&sim)}
+function setTipoEntrega(tipo){tipoEntrega=tipo==="retirada"&&String(storeConfig.endereco_retirada||"").trim()?"retirada":"entrega";document.getElementById("modoEntrega").setAttribute("aria-pressed",tipoEntrega==="entrega");document.getElementById("modoRetirada").setAttribute("aria-pressed",tipoEntrega==="retirada");document.getElementById("deliveryAddress").hidden=tipoEntrega==="retirada";document.getElementById("pickupAddressInfo").hidden=tipoEntrega!=="retirada"}
+function textoSeguro(v){return String(v||"").replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function renderStoreInfo(){var e=document.getElementById("storeInfo"),a=[];if(storeConfig.nome_legal)a.push(storeConfig.nome_legal);if(storeConfig.documento)a.push("CPF/CNPJ: "+storeConfig.documento);if(storeConfig.telefone)a.push("Contato: "+storeConfig.telefone);if(storeConfig.email)a.push("E-mail: "+storeConfig.email);if(storeConfig.endereco_comercial)a.push("Endereço: "+storeConfig.endereco_comercial);e.textContent=a.join("\\n")}
+function abrirPolitica(chave){var titulos={politica_entrega:"Entrega e frete",politica_trocas:"Trocas e devoluções",politica_privacidade:"Privacidade",politica_arrependimento:"Arrependimento e cancelamento"};document.getElementById("policyTitle").textContent=titulos[chave]||"Informações da loja";document.getElementById("policyBody").textContent=storeConfig[chave]||"Esta informação ainda não foi cadastrada pela loja. Entre em contato pelo WhatsApp para esclarecer suas dúvidas.";document.getElementById("policyModal").hidden=false}
+
 var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
@@ -294,6 +307,10 @@ function render(){
 function toast(t){var e=document.getElementById("toast");e.textContent=t;e.className="on";clearTimeout(toast.t);toast.t=setTimeout(function(){e.className=""},2200)}
 document.addEventListener("click",function(e){
   var t=e.target,b=t.closest(".bub"),g=t.closest("[data-go]"),cd=t.closest(".card");
+  var modo=t.closest("[data-delivery-mode]");if(modo){setTipoEntrega(modo.dataset.deliveryMode);return}
+  var pol=t.closest("[data-policy]");if(pol){abrirPolitica(pol.dataset.policy);return}
+  if(t.id==="closePolicy"||t.id==="policyModal"){document.getElementById("policyModal").hidden=true;return}
+
   if(b){cat=b.dataset.cat;render();var d=cat=="M"?"masculino":"feminino";if(cat=="F"||cat=="M")document.getElementById(d).scrollIntoView()}
   if(g){var el=document.getElementById("p"+g.dataset.go);if(el){el.classList.add("hl");setTimeout(function(){el.classList.remove("hl")},2000)}}
   if(cd){
@@ -329,8 +346,8 @@ document.getElementById("q").addEventListener("input",function(e){qs=e.target.va
 function addCart(id,n,c,z,p){var f=cart.filter(function(i){return i.id==id&&i.c==c&&i.z==z})[0];if(f)f.q++;else cart.push({id:id,n:n,c:c,z:z,p:p,q:1})}
 function checkout(){
   if(!cart.length){toast("Sua sacola está vazia");return}
-  var bad=null;["cn","ca","cp"].forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
-  if(bad){bad.focus();toast("Preencha nome, endereço e forma de pagamento");return}
+  var bad=null,camposObrigatorios=tipoEntrega==="retirada"?["cn","cp"]:["cn","ca","cp"];camposObrigatorios.forEach(function(i){var e=document.getElementById(i),ko=!e.value.trim();e.classList.toggle("bad",ko);if(ko&&!bad)bad=e});
+  if(bad){bad.focus();toast(tipoEntrega==="retirada"?"Preencha nome e forma de pagamento":"Preencha nome, endereço e forma de pagamento");return}
   var pagamento=document.getElementById("cp").value;
   var precisaTroco=document.getElementById("ctn").value,valorTroco=Number(document.getElementById("ct").value);
   var estimado=cart.reduce(function(n,i){return n+i.p*i.q},0);
@@ -344,7 +361,8 @@ function checkout(){
   botao.disabled=true;botao.textContent="Registrando pedido...";
   fetch("/api/pedidos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
     nome:document.getElementById("cn").value.trim(),
-    endereco:document.getElementById("ca").value.trim(),
+    endereco:tipoEntrega==="entrega"?document.getElementById("ca").value.trim():"",
+    tipo_entrega:tipoEntrega,
     pagamento:pagamento,
     precisa_troco:pagamento==="Dinheiro"&&precisaTroco==="Sim",
     troco_para:pagamento==="Dinheiro"&&precisaTroco==="Sim"?valorTroco:null,
@@ -366,9 +384,9 @@ function checkout(){
       "",
       "💰 *Total: "+brl(Number(pedido.total))+"*",
       "",
-      "*Dados para entrega*",
+      "*Dados para "+(pedido.tipo_entrega==="retirada"?"retirada":"entrega")+"*",
       "Nome: "+document.getElementById("cn").value.trim(),
-      "Endereço: "+document.getElementById("ca").value.trim(),
+      (pedido.tipo_entrega==="retirada"?"Local de retirada: ":"Endereço: ")+pedido.endereco_entrega,
       "Pagamento: "+pagamento
     );
     if(pagamento==="Dinheiro"){

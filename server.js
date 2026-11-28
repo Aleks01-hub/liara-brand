@@ -5,6 +5,16 @@ const jwt = require("jsonwebtoken");
 const path = require("path");
 
 const app = express();
+const lojaConfigReady = db.query(`
+  CREATE TABLE IF NOT EXISTS configuracoes_loja (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    dados JSONB NOT NULL DEFAULT '{}'::jsonb,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+  INSERT INTO configuracoes_loja(id,dados) VALUES(1,'{}'::jsonb)
+  ON CONFLICT(id) DO NOTHING;
+`).then(() => true);
+
 const db = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false },
@@ -76,6 +86,37 @@ function auth(req, res, next) {
     res.status(401).json({ erro: "Não autorizado" });
   }
 }
+
+const CONFIG_LOJA_PADRAO = {
+  nome_legal: "", documento: "", telefone: "", email: "", endereco_comercial: "",
+  endereco_retirada: "", politica_entrega: "", politica_trocas: "",
+  politica_privacidade: "", politica_arrependimento: ""
+};
+async function lerConfigLoja() {
+  await lojaConfigReady;
+  const r = await db.query("SELECT dados FROM configuracoes_loja WHERE id=1");
+  return { ...CONFIG_LOJA_PADRAO, ...(r.rows[0] && r.rows[0].dados || {}) };
+}
+app.get("/api/config-loja", ah(async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(await lerConfigLoja());
+}));
+app.get("/api/admin/config-loja", auth, ah(async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(await lerConfigLoja());
+}));
+app.put("/api/admin/config-loja", auth, ah(async (req, res) => {
+  const b = req.body || {};
+  const dados = {};
+  for (const campo of Object.keys(CONFIG_LOJA_PADRAO)) {
+    const valor = String(b[campo] || "").trim();
+    if (valor.length > 5000) return res.status(400).json({ erro: "Um campo das configurações está muito longo." });
+    dados[campo] = valor;
+  }
+  await lojaConfigReady;
+  await db.query("UPDATE configuracoes_loja SET dados=$1::jsonb,atualizado_em=now() WHERE id=1", [JSON.stringify(dados)]);
+  res.json(dados);
+}));
 
 const COLS = "nome,descricao,preco,preco_antigo,imagem_url,categoria,genero,variantes,tamanhos,em_estoque,destaque,visivel_catalogo";
 function campos(b) {
@@ -247,11 +288,18 @@ app.post("/api/pedidos", ah(async (req, res) => {
   await stockTablesReady;
   const body = req.body || {};
   const nome = String(body.nome || "").trim();
-  const endereco = String(body.endereco || "").trim();
+  const tipoEntrega = body.tipo_entrega === "retirada" ? "retirada" : "entrega";
   const pagamento = String(body.pagamento || "");
   const itens = Array.isArray(body.itens) ? body.itens : [];
-  if (!nome || nome.length > 120 || !endereco || endereco.length > 1000) {
-    return res.status(400).json({ erro: "Informe nome e endereço válidos." });
+  let endereco = String(body.endereco || "").trim();
+  if (tipoEntrega === "retirada") {
+    const config = await lerConfigLoja();
+    const localRetirada = String(config.endereco_retirada || "").trim();
+    if (!localRetirada) return res.status(400).json({ erro: "A loja ainda não cadastrou o endereço de retirada. Fale com a loja pelo WhatsApp." });
+    endereco = "Retirada na loja: " + localRetirada;
+  }
+  if (!nome || nome.length > 120 || (tipoEntrega === "entrega" && (!endereco || endereco.length > 1000))) {
+    return res.status(400).json({ erro: "Informe nome e endereço de entrega válidos." });
   }
   if (!["Pix", "Cartão", "Dinheiro"].includes(pagamento)) {
     return res.status(400).json({ erro: "Forma de pagamento inválida." });
@@ -335,7 +383,7 @@ app.post("/api/pedidos", ah(async (req, res) => {
       );
     }
     await client.query("COMMIT");
-    res.status(201).json({ ...pedido.rows[0], pagamento, precisa_troco: precisaTroco, troco_para: trocoPara });
+    res.status(201).json({ ...pedido.rows[0], pagamento, tipo_entrega: tipoEntrega, precisa_troco: precisaTroco, troco_para: trocoPara });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;

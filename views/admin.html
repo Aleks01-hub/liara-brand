@@ -77,7 +77,7 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
 #toast.on{opacity:1}#toast.bad{background:var(--bad);color:#fff}
 @media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}.tool{grid-template-columns:1fr 1fr}.tool #busca,.tool #novo{grid-column:1/-1}.stats{grid-template-columns:repeat(2,1fr)}.cr{grid-template-columns:44px minmax(0,1fr) 76px auto auto}.cr .move{grid-column:4}.cr .x{grid-column:5}.cr .btn{grid-column:2/4}}
 </style></head><body>
-<header class="bar"><b>LIARA <span>Painel</span></b><nav id="adminNav" hidden><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/admin/clientes">Clientes</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn g sm" id="sair" hidden>Sair</button></nav></header>
+<header class="bar"><b>LIARA <span>Painel</span></b><nav id="adminNav" hidden><a href="/admin">Painel</a><a href="/admin/pdv">PDV</a><a href="/admin/estoque">Estoque</a><a href="/admin/pedidos">Pedidos</a><a href="/admin/cupons">Cupons</a><a href="/admin/clientes">Clientes</a><a href="#configLoja">Configurações da loja</a><a href="/" target="_blank" rel="noopener">Ver site ↗</a><button class="btn g sm" id="sair" hidden>Sair</button></nav></header>
 <main>
 <section class="box" id="login"><h2 style="margin:0">Entrar</h2>
   <label>Usuário<input id="u" autocomplete="username"></label>
@@ -94,6 +94,24 @@ legend{font-weight:700;padding:0 6px;color:var(--acc)}.g2{display:grid;grid-temp
     <button class="btn" id="novo">+ Novo produto</button>
   </div>
   <div id="lista"></div>
+  <section class="box" id="configLoja" style="max-width:none;margin:24px 0">
+    <h2 style="margin:0">Configurações da loja</h2>
+    <p class="mt">Essas informações aparecem no site e nas políticas. Preencha com os dados reais da loja.</p>
+    <fieldset><legend>Identificação e contato</legend>
+      <label>Nome legal / razão social<input id="cfg_nome_legal" maxlength="250"></label>
+      <label>CPF ou CNPJ<input id="cfg_documento" maxlength="40"></label>
+      <div class="g2"><label>Telefone / WhatsApp<input id="cfg_telefone" maxlength="80"></label><label>E-mail de atendimento<input id="cfg_email" type="email" maxlength="250"></label></div>
+      <label>Endereço comercial (opcional)<textarea id="cfg_endereco_comercial" rows="2" maxlength="1000"></textarea></label>
+      <label>Endereço completo para retirada na loja<textarea id="cfg_endereco_retirada" rows="3" maxlength="1000" placeholder="Rua, número, bairro, cidade, referência"></textarea></label>
+    </fieldset>
+    <fieldset><legend>Políticas exibidas no site</legend>
+      <label>Entrega e frete<textarea id="cfg_politica_entrega" rows="4" maxlength="5000" placeholder="Informe regiões atendidas, valores/prazos de entrega e como o frete é combinado."></textarea></label>
+      <label>Trocas e devoluções<textarea id="cfg_politica_trocas" rows="4" maxlength="5000" placeholder="Informe como solicitar troca/devolução e as condições aplicáveis."></textarea></label>
+      <label>Privacidade<textarea id="cfg_politica_privacidade" rows="4" maxlength="5000" placeholder="Explique quais dados são usados e para quais finalidades."></textarea></label>
+      <label>Direito de arrependimento<textarea id="cfg_politica_arrependimento" rows="4" maxlength="5000" placeholder="Explique como o cliente pode solicitar o cancelamento dentro do prazo legal."></textarea></label>
+    </fieldset>
+    <button class="btn" id="salvarConfigLoja">Salvar configurações da loja</button>
+  </section>
 </div>
 </main>
 <div class="mo" id="modal" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="mt">
@@ -157,8 +175,12 @@ function ordenarTamanhosAdmin(lista){
 }
 function toast(t,bad){var e=$("toast");e.textContent=t;e.className="on"+(bad?" bad":"");clearTimeout(toast.t);toast.t=setTimeout(function(){e.className=""},2800)}
 function api(u,m,b){return fetch(u,{method:m||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+T},body:b?JSON.stringify(b):undefined}).then(function(r){if(r.status==401&&T){sair(true);return{erro:"auth"}}return r.json()}).catch(function(){toast("Sem conexão. Tente de novo.",true);return{erro:"rede"}})}
-function mostrar(){var on=!!T;$("login").hidden=on;$("app").hidden=!on;$("adminNav").hidden=!on;$("sair").hidden=!on;if(on){listar();carregarCores()}}
+function mostrar(){var on=!!T;$("login").hidden=on;$("app").hidden=!on;$("adminNav").hidden=!on;$("sair").hidden=!on;if(on){listar();carregarCores();carregarConfigLoja()}}
 function sair(exp){T=null;localStorage.removeItem("tk");mostrar();if(exp)toast("Sessão expirada. Entre de novo.",true)}
+var CAMPOS_CONFIG_LOJA=["nome_legal","documento","telefone","email","endereco_comercial","endereco_retirada","politica_entrega","politica_trocas","politica_privacidade","politica_arrependimento"];
+function carregarConfigLoja(){api("/api/admin/config-loja").then(function(d){if(!d||d.erro)return;CAMPOS_CONFIG_LOJA.forEach(function(k){var e=$("cfg_"+k);if(e)e.value=d[k]||""})})}
+$("salvarConfigLoja").onclick=function(){var d={};CAMPOS_CONFIG_LOJA.forEach(function(k){d[k]=$("cfg_"+k).value.trim()});var b=$("salvarConfigLoja");b.disabled=true;api("/api/admin/config-loja","PUT",d).then(function(r){if(r.erro){toast(r.erro,true);return}toast("Configurações da loja salvas");carregarConfigLoja()}).finally(function(){b.disabled=false})};
+
 function entrar(){var u=$("u").value.trim(),s=$("s").value;if(!u||!s)return toast("Digite usuário e senha",true);$("entrar").disabled=true;
   fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario:u,senha:s})}).then(function(r){return r.json().catch(function(){return{erro:"Resposta inválida do servidor (HTTP "+r.status+")"}}).then(function(d){if(r.ok&&d.token){T=d.token;localStorage.setItem("tk",T);$("s").value="";mostrar()}else toast(d.erro||"Falha no login (HTTP "+r.status+")",true)})}).catch(function(){toast("Não foi possível conectar ao servidor. Verifique o deploy do Render.",true)}).then(function(){$("entrar").disabled=false})}
 $("entrar").onclick=entrar;$("s").onkeydown=function(e){if(e.key=="Enter")entrar()};$("sair").onclick=function(){sair()};

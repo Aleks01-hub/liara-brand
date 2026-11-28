@@ -82,6 +82,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sz.sold-out[aria-pressed="true"]{opacity:.68;color:var(--accink);background:var(--acc);border:2px dashed var(--mute);box-shadow:0 0 0 2px rgba(31,47,70,.85)}
 
 
+.last-unit-flag{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;margin:7px 0 0;background:#f59e0b;color:#392000;border:1px solid #d97706;border-radius:5px;padding:3px 9px;font-size:11px;line-height:1.35;font-weight:800;letter-spacing:.02em;box-shadow:0 1px 3px rgba(0,0,0,.12)}.last-unit-flag[hidden]{display:none!important}.fc .last-unit-flag{margin-top:5px}
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
 .out .pic img,.out .pic svg{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
 .qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}
@@ -224,6 +225,12 @@ function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
 function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
 function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
+function estoqueTotalProduto(p){
+  return (p.stock||[]).reduce(function(total,item){return total+(Number(item.quantidade)||0)},0);
+}
+function avisoUltimaUnidade(p){
+  return estoqueTotalProduto(p)===1?'<span class="last-unit-flag">🔥 Última unidade</span>':"";
+}
 function estoqueQtd(p,cor,tamanho){
   var item=(p.stock||[]).filter(function(x){return String(x.cor).toLowerCase()===String(cor).toLowerCase()&&String(x.tamanho)===String(tamanho)})[0];
   return item?Number(item.quantidade)||0:0;
@@ -263,7 +270,7 @@ function card(p){
   }).join("");
   var sz=p.z.map(function(z){var qtd=estoqueQtd(p,C[s.c][0],z);return '<button class="sz'+(qtd<1?' sold-out':'')+'" data-z="'+z+'" aria-pressed="'+(z==s.z)+'" title="'+(qtd>0?qtd+" unidade(s) disponível(is)":"Esgotado nesta combinação")+'">'+z+'</button>'}).join("");
   var qtdInicial=s.z?estoqueQtd(p,C[s.c][0],s.z):0,qtdCorInicial=estoqueCorTotal(p,C[s.c][0]);
-  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="stock-flag"'+((s.z?qtdInicial:qtdCorInicial)>0?' hidden':'')+'>Esgotado</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
+  return '<article class="card'+(p.e?'':' out')+'" id="p'+p.id+'" data-id="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="stock-flag"'+((s.z?qtdInicial:qtdCorInicial)>0?' hidden':'')+'>Esgotado</span>',s.c).replace('fill="'+C[p.c[0]][1]+'"','fill="'+C[s.c][1]+'"')+avisoUltimaUnidade(p)+avisoUltimaUnidade(p)+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div><div class="row"><span class="lbl">Cor: <b class="cn">'+C[s.c][0]+'</b></span>'+sw+'</div><div class="row"><span class="lbl">Tamanho'+medlink()+'</span><div class="szs">'+sz+'</div></div><button class="add" '+(qtdInicial<1?'disabled':'')+'>'+(s.z&&qtdInicial>0?"Adicionar à sacola":"Escolha um tamanho")+'</button>'+(p.e?'':'<a class="av" target="_blank" rel="noopener" href="https://wa.me/'+WA+'?text='+encodeURIComponent("Olá! Quero ser avisado(a) quando o produto "+p.n+" voltar ao estoque.")+'">Avise-me quando chegar</a>')+'<button class="shr" data-shr>Compartilhar</button></article>';
 }
 function fc(p){return '<a class="fc" href="#p'+p.id+'" data-go="'+p.id+'">'+pic(p,'<span class="tag">'+p.tag+'</span><span class="rk">#'+p.r+'</span>')+'<h3>'+p.n+'</h3><div class="price"><b>'+brl(p.p)+'</b>'+(p.o?'<s>'+brl(p.o)+'</s>':'')+'</div></a>'}
 function ok(p){

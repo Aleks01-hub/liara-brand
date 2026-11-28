@@ -386,7 +386,7 @@ function checkout(){
       "",
       "*Dados para "+(pedido.tipo_entrega==="retirada"?"retirada":"entrega")+"*",
       "Nome: "+document.getElementById("cn").value.trim(),
-      (pedido.tipo_entrega==="retirada"?"Local de retirada: ":"Endereço: ")+pedido.endereco_entrega,
+      (pedido.tipo_entrega==="retirada"?"Local de retirada: ":"Endereço: ")+(pedido.tipo_entrega==="retirada"?pedido.endereco_entrega.replace(/^Retirada na loja:\s*/i,""):pedido.endereco_entrega),
       "Pagamento: "+pagamento
     );
     if(pagamento==="Dinheiro"){

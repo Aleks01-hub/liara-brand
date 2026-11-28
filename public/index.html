@@ -82,7 +82,7 @@ header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var
 .sz.sold-out[aria-pressed="true"]{opacity:.68;color:var(--accink);background:var(--acc);border:2px dashed var(--mute);box-shadow:0 0 0 2px rgba(31,47,70,.85)}
 
 
-.last-unit-fire{position:absolute;top:9px;right:9px;width:25px;height:30px;z-index:5;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2));pointer-events:none}.last-unit-fire::before{content:"";position:absolute;inset:0;background:linear-gradient(155deg,#ffcf33 8%,#ff8a00 45%,#ed3b16 78%);clip-path:polygon(50% 0,58% 24%,78% 12%,72% 40%,100% 53%,88% 80%,68% 100%,28% 100%,8% 78%,0 55%,22% 37%,34% 16%)}.last-unit-fire::after{content:"";position:absolute;left:8px;bottom:3px;width:11px;height:15px;background:linear-gradient(#fff2a0,#ffd12e 65%,#ff8b00);clip-path:polygon(50% 0,68% 35%,100% 55%,85% 100%,20% 100%,0 58%,35% 32%)}
+
 .add{margin-top:12px;background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:10px;font-weight:700}
 .out .pic img,.out .pic svg{opacity:.55}.out .tag{background:var(--ink);color:var(--bg)}.add:disabled{background:var(--line);color:var(--mute);cursor:not-allowed}
 .qt{display:inline-flex;gap:6px;align-items:center;margin-top:4px}.qt button{width:28px;height:28px;padding:0;border-radius:50%;border:1.5px solid var(--acc);background:none;color:var(--acc);font-weight:700}
@@ -224,10 +224,7 @@ var cart=lerSacola(),sel={},cat="all",qs="";
 function brl(v){return "R$ "+v.toFixed(2).replace(".",",")}
 function ic(x){return SH[x]?'<svg viewBox="0 0 100 120"><path d="'+SH[x]+'"/></svg>':x}
 function bubs(){document.getElementById("bubs").innerHTML=CATS.map(function(c){return '<button class="bub" data-cat="'+c[0]+'" aria-pressed="'+(c[0]==cat)+'"><i>'+ic(c[2])+'</i>'+c[1]+'</button>'}).join("")}
-function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(estoqueTotalProduto(p)===1?'<span class="last-unit-fire" role="img" aria-label="Última unidade" title="Última unidade"></span>':'')+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
-function estoqueTotalProduto(p){
-  return (p.stock||[]).reduce(function(total,item){return total+(Number(item.quantidade)||0)},0);
-}
+function pic(p,x,k){k=k||p.c[0];return '<div class="pic">'+(p.imgs?'<img src="'+p.imgs[k]+'" alt="'+p.n+' '+C[k][0]+'">':'')+x+(p.imgs?'':'<svg viewBox="0 0 100 120" fill="'+C[p.c[0]][1]+'" stroke="rgba(31,47,70,.35)" stroke-width="1.5" stroke-linejoin="round"><path d="'+SH[p.sh]+'"/></svg>')+'</div>'}
 function estoqueQtd(p,cor,tamanho){
   var item=(p.stock||[]).filter(function(x){return String(x.cor).toLowerCase()===String(cor).toLowerCase()&&String(x.tamanho)===String(tamanho)})[0];
   return item?Number(item.quantidade)||0:0;
